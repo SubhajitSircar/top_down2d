@@ -7,7 +7,7 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody2D rb;
     private Vector2 movement;
 
-    void Start()
+    void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
     }
@@ -17,11 +17,13 @@ public class PlayerMovement : MonoBehaviour
         movement.x = Input.GetAxisRaw("Horizontal");
         movement.y = Input.GetAxisRaw("Vertical");
 
-        movement = movement.normalized;
+        movement.Normalize();
     }
 
     void FixedUpdate()
     {
-        rb.velocity = movement * moveSpeed;
+        Vector2 newPosition = rb.position + movement * moveSpeed * Time.fixedDeltaTime;
+
+        rb.MovePosition(newPosition);
     }
 }
