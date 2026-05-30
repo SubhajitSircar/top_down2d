@@ -3,7 +3,11 @@ guid: b46755e7736fb9f4a957b27074d80179
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - frontSprite: {fileID: 973658854, guid: 00b3d588e635b894699e029137d83d7d, type: 3}
+  - backSprite: {instanceID: 0}
+  - leftSprite: {instanceID: 0}
+  - rightSprite: {fileID: -1775755241, guid: 00b3d588e635b894699e029137d83d7d, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

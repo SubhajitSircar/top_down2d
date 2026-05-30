@@ -1,21 +1,28 @@
 using UnityEngine;
+using UnityEngine.Tilemaps; // Required for Tilemaps
 using System.Collections.Generic;
 
 public class DungeonGenerator : MonoBehaviour
 {
-    public GameObject floorTile;
-    public GameObject wallTile;
+    [Header("Tilemap References")]
+    public Tilemap floorTilemap;
+    public Tilemap wallTilemap;
+
+    [Header("Tile Assets")]
+    public TileBase floorTile;
+    public TileBase wallTile;
+
+    [Header("Dungeon Settings")]
+    [Range(3, 20)] public int roomCount = 5;
+    [Range(10, 30)] public int minRoomSize = 18;
+    [Range(10, 30)] public int maxRoomSize = 28;
+    public int corridorSpacing = 35;
+
+    [Header("Player")]
     public GameObject player;
 
-    private HashSet<Vector2> floorPositions =
-        new HashSet<Vector2>();
-
-    private List<GameObject> spawnedTiles =
-        new List<GameObject>();
-
-    private Vector2 currentRoomPosition =
-        Vector2.zero;
-
+    private HashSet<Vector2Int> floorPositions = new HashSet<Vector2Int>();
+    private Vector2Int currentRoomPosition = Vector2Int.zero;
     private Vector2 firstRoomCenter;
     private bool firstRoomCreated = false;
 
@@ -36,46 +43,31 @@ public class DungeonGenerator : MonoBehaviour
     void GenerateDungeon()
     {
         floorPositions.Clear();
-
         firstRoomCreated = false;
-
-        currentRoomPosition = Vector2.zero;
-
-        int roomCount = 5;
+        currentRoomPosition = Vector2Int.zero;
 
         for (int i = 0; i < roomCount; i++)
         {
             CreateRoom(currentRoomPosition);
 
-            Vector2 newRoomPosition =
-                currentRoomPosition +
-                GetRandomDirection() * 35;
-
-            CreateCorridor(
-                currentRoomPosition,
-                newRoomPosition
-            );
-
-            currentRoomPosition =
-                newRoomPosition;
+            Vector2Int newRoomPosition = currentRoomPosition + GetRandomDirection() * corridorSpacing;
+            CreateCorridor(currentRoomPosition, newRoomPosition);
+            currentRoomPosition = newRoomPosition;
         }
 
-        GenerateWalls();
-
-        player.transform.position =
-            firstRoomCenter;
+        DrawDungeonTiles();
+        player.transform.position = firstRoomCenter;
     }
 
-    void CreateRoom(Vector2 roomPosition)
+    void CreateRoom(Vector2Int roomPosition)
     {
-        int width = Random.Range(18, 28);
-        int height = Random.Range(18, 28);
+        int width = Random.Range(minRoomSize, maxRoomSize);
+        int height = Random.Range(minRoomSize, maxRoomSize);
 
-        Vector2 roomCenter =
-            new Vector2(
-                roomPosition.x + width / 2,
-                roomPosition.y + height / 2
-            );
+        Vector2 roomCenter = new Vector2(
+            roomPosition.x + width / 2f,
+            roomPosition.y + height / 2f
+        );
 
         if (!firstRoomCreated)
         {
@@ -87,81 +79,54 @@ public class DungeonGenerator : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                Vector2 pos =
-                    new Vector2(
-                        x + roomPosition.x,
-                        y + roomPosition.y
-                    );
-
+                Vector2Int pos = new Vector2Int(x + roomPosition.x, y + roomPosition.y);
                 floorPositions.Add(pos);
             }
         }
     }
 
-    void CreateCorridor(
-        Vector2 start,
-        Vector2 end
-    )
+    void CreateCorridor(Vector2Int start, Vector2Int end)
     {
-        Vector2 position = start;
+        Vector2Int position = start;
 
-        // Horizontal corridor
-        while ((int)position.x != (int)end.x)
+        while (position.x != end.x)
         {
             CreateCorridorWidth(position);
-
-            position.x +=
-                Mathf.Sign(end.x - start.x);
+            position.x += (int)Mathf.Sign(end.x - start.x);
         }
 
-        // Vertical corridor
-        while ((int)position.y != (int)end.y)
+        while (position.y != end.y)
         {
             CreateCorridorWidth(position);
-
-            position.y +=
-                Mathf.Sign(end.y - start.y);
+            position.y += (int)Mathf.Sign(end.y - start.y);
         }
     }
 
-    void CreateCorridorWidth(Vector2 position)
+    void CreateCorridorWidth(Vector2Int position)
     {
-        for (int x = -1; x <= 1; x++)
+        for (int x = -2; x <= 2; x++)
         {
-            for (int y = -1; y <= 1; y++)
+            for (int y = -2; y <= 2; y++)
             {
-                Vector2 corridorPos =
-                    new Vector2(
-                        position.x + x,
-                        position.y + y
-                    );
-
+                Vector2Int corridorPos = new Vector2Int(position.x + x, position.y + y);
                 floorPositions.Add(corridorPos);
             }
         }
     }
 
-    void GenerateWalls()
+    void DrawDungeonTiles()
     {
-        HashSet<Vector2> wallPositions =
-            new HashSet<Vector2>();
+        HashSet<Vector2Int> wallPositions = new HashSet<Vector2Int>();
+        Vector2Int[] directions = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
-        Vector2[] directions =
+        foreach (Vector2Int pos in floorPositions)
         {
-            Vector2.up,
-            Vector2.down,
-            Vector2.left,
-            Vector2.right
-        };
+            Vector3Int tilePos = new Vector3Int(pos.x, pos.y, 0);
+            floorTilemap.SetTile(tilePos, floorTile);
 
-        foreach (Vector2 pos in floorPositions)
-        {
-            SpawnTile(floorTile, pos);
-
-            foreach (Vector2 dir in directions)
+            foreach (Vector2Int dir in directions)
             {
-                Vector2 neighbor = pos + dir;
-
+                Vector2Int neighbor = pos + dir;
                 if (!floorPositions.Contains(neighbor))
                 {
                     wallPositions.Add(neighbor);
@@ -169,49 +134,22 @@ public class DungeonGenerator : MonoBehaviour
             }
         }
 
-        foreach (Vector2 wallPos in wallPositions)
+        foreach (Vector2Int wallPos in wallPositions)
         {
-            SpawnTile(wallTile, wallPos);
+            Vector3Int tilePos = new Vector3Int(wallPos.x, wallPos.y, 0);
+            wallTilemap.SetTile(tilePos, wallTile);
         }
     }
 
-    Vector2 GetRandomDirection()
+    Vector2Int GetRandomDirection()
     {
-        Vector2[] directions =
-        {
-            Vector2.up,
-            Vector2.down,
-            Vector2.left,
-            Vector2.right
-        };
-
-        return directions[
-            Random.Range(0, directions.Length)
-        ];
-    }
-
-    void SpawnTile(
-        GameObject prefab,
-        Vector2 position
-    )
-    {
-        GameObject tile =
-            Instantiate(
-                prefab,
-                position,
-                Quaternion.identity
-            );
-
-        spawnedTiles.Add(tile);
+        Vector2Int[] directions = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+        return directions[Random.Range(0, directions.Length)];
     }
 
     void ClearDungeon()
     {
-        foreach (GameObject tile in spawnedTiles)
-        {
-            Destroy(tile);
-        }
-
-        spawnedTiles.Clear();
+        floorTilemap.ClearAllTiles();
+        wallTilemap.ClearAllTiles();
     }
 }
