@@ -172,7 +172,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
-  m_VolumeFrameworkUpdateModeOption: 2
+  m_VolumeFrameworkUpdateModeOption: 0
   m_RenderPostProcessing: 0
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
@@ -204,7 +204,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.1448469, g: 0.2022492, b: 0.2924528, a: 0}
+  m_BackGroundColor: {r: 0.20367567, g: 0.20892781, b: 0.21698111, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -370,7 +370,7 @@ GameObject:
   - component: {fileID: 1306418557}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -559,6 +559,7 @@ MonoBehaviour:
   floorTile: {fileID: 507317362629071727, guid: b22d88e0de009e54d9ed890554c8df02, type: 3}
   wallTile: {fileID: 6790164144593415245, guid: 5ea1df45a2152bb4fa0bd414c3ea8056, type: 3}
   player: {fileID: 1306418552}
+  enemyPrefab: {fileID: 8418779445054106146, guid: 07488a22cc6c4cd4681edab7bd990067, type: 3}
 --- !u!4 &2048449386
 Transform:
   m_ObjectHideFlags: 0
