@@ -162,7 +162,8 @@ PlayerSettings:
   resetResolutionOnWindowResize: 0
   androidSupportedAspectRatio: 1
   androidMaxAspectRatio: 2.1
-  applicationIdentifier: {}
+  applicationIdentifier:
+    Standalone: com.DefaultCompany.top-down2d
   buildNumber:
     Standalone: 0
     VisionOS: 0
@@ -692,8 +693,8 @@ PlayerSettings:
   apiCompatibilityLevelPerPlatform: {}
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: top_down2d
-  metroPackageVersion: 
+  metroPackageName: topdown2d
+  metroPackageVersion: 1.0.0.0
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
@@ -701,7 +702,7 @@ PlayerSettings:
   metroCertificateNotAfter: 0000000000000000
   metroApplicationDescription: top_down2d
   wsaImages: {}
-  metroTileShortName: 
+  metroTileShortName: top_down2d
   metroTileShowName: 0
   metroMediumTileShowName: 0
   metroLargeTileShowName: 0
