@@ -1480,12 +1480,13 @@ MonoBehaviour:
   wallTilemap: {fileID: 1426662969}
   floorTile: {fileID: 11400000, guid: 5f548ab8a387d3d4bbf09d449573da4b, type: 2}
   wallTile: {fileID: 11400000, guid: 651be9e57211442469dd658f562e4182, type: 2}
-  roomCount: 5
-  minRoomSize: 20
-  maxRoomSize: 28
+  roomCount: 8
+  minRoomSize: 50
+  maxRoomSize: 60
   corridorSpacing: 45
-  corridorWidth: 4
+  corridorWidth: 8
   player: {fileID: 1306418552}
+  doorPrefab: {fileID: 2939227642930478133, guid: 589babbb70007cb4d82bf4d0c0880df9, type: 3}
   enemyPrefab: {fileID: 6785372697113670938, guid: a9a4fec06c610d447a2d48e78e4dcb96, type: 3}
   enemyCount: 8
 --- !u!4 &2048449386

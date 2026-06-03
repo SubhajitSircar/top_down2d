@@ -13,22 +13,27 @@ public class DungeonGenerator : MonoBehaviour
     public TileBase wallTile;
 
     [Header("Dungeon Settings")]
-    public int roomCount = 6;
+    public int roomCount = 5;
 
-    [Range(20, 60)]
-    public int minRoomSize = 30;
+    [Range(30, 150)]
+    public int minRoomSize = 60;
 
-    [Range(20, 60)]
-    public int maxRoomSize = 50;
+    [Range(30, 150)]
+    public int maxRoomSize = 100;
 
-    public int corridorSpacing = 70;
+    public int corridorSpacing = 150;
 
     [Header("Corridor Settings")]
-    [Range(1, 15)]
-    public int corridorWidth = 7;
+    [Range(1, 20)]
+    public int corridorWidth = 12;
 
     [Header("Player")]
     public GameObject player;
+
+    [Header("Door")]
+    public GameObject doorPrefab;
+
+    private GameObject currentDoor;
 
     // CHANGED TO PUBLIC: Allows your EnemyMovement script to safely inspect 
     // valid coordinates across the entire level for its exploration routine.
@@ -55,7 +60,9 @@ public class DungeonGenerator : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             ClearEnemies();
+            ClearDoor();
             ClearDungeon();
+
             GenerateDungeon();
         }
     }
@@ -91,6 +98,7 @@ public class DungeonGenerator : MonoBehaviour
         }
 
         SpawnEnemies();
+        SpawnDoor();
     }
 
     void CreateRandomRoom(Vector2Int roomPosition)
@@ -119,22 +127,23 @@ public class DungeonGenerator : MonoBehaviour
 
     void CreateRectangleRoom(Vector2Int start)
     {
-        int width = Random.Range(30, 50);
-        int height = Random.Range(30, 50);
+        int width = Random.Range(minRoomSize, maxRoomSize);
+        int height = Random.Range(minRoomSize, maxRoomSize);
 
         FillRectangle(start, width, height);
+
         SaveSpawnPoint(start, width, height);
     }
 
     void CreateLRoom(Vector2Int start)
     {
-        int width = Random.Range(25, 40);
-        int height = Random.Range(25, 40);
+        int width = Random.Range(minRoomSize, maxRoomSize);
+        int height = Random.Range(minRoomSize, maxRoomSize);
 
         FillRectangle(start, width, height);
 
         FillRectangle(
-            start + new Vector2Int(width - 10, 0),
+            start + new Vector2Int(width - width / 4, 0),
             width / 2,
             height
         );
@@ -144,7 +153,7 @@ public class DungeonGenerator : MonoBehaviour
 
     void CreateCrossRoom(Vector2Int start)
     {
-        int size = Random.Range(30, 45);
+        int size = Random.Range(minRoomSize, maxRoomSize);
 
         FillRectangle(
             start + new Vector2Int(size / 3, 0),
@@ -163,10 +172,11 @@ public class DungeonGenerator : MonoBehaviour
 
     void CreateHallRoom(Vector2Int start)
     {
-        int width = Random.Range(50, 80);
-        int height = Random.Range(15, 20);
+        int width = Random.Range(maxRoomSize, maxRoomSize + 40);
+        int height = Random.Range(minRoomSize / 2, minRoomSize);
 
         FillRectangle(start, width, height);
+
         SaveSpawnPoint(start, width, height);
     }
 
@@ -289,6 +299,63 @@ public class DungeonGenerator : MonoBehaviour
         }
     }
 
+    void SpawnDoor()
+    {
+        if (doorPrefab == null)
+            return;
+
+        if (currentDoor != null)
+            Destroy(currentDoor);
+
+        Vector2Int bestPosition = Vector2Int.zero;
+        float maxDistance = 0f;
+
+        foreach (Vector2Int pos in floorPositions)
+        {
+            bool nearWall =
+                !floorPositions.Contains(pos + Vector2Int.up) ||
+                !floorPositions.Contains(pos + Vector2Int.down) ||
+                !floorPositions.Contains(pos + Vector2Int.left) ||
+                !floorPositions.Contains(pos + Vector2Int.right);
+
+            // Only consider tiles near room edges/corners
+            if (!nearWall)
+                continue;
+
+            float distance =
+                Vector2.Distance(
+                    new Vector2(pos.x, pos.y),
+                    firstRoomCenter
+                );
+
+            if (distance > maxDistance)
+            {
+                maxDistance = distance;
+                bestPosition = pos;
+            }
+        }
+
+        currentDoor = Instantiate(
+            doorPrefab,
+            new Vector3(
+                bestPosition.x + 0.5f,
+                bestPosition.y + 0.5f,
+                0
+            ),
+            Quaternion.identity
+        );
+    }
+
+    void ClearDoor()
+    {
+        if (currentDoor != null)
+        {
+            Destroy(currentDoor);
+        }
+    }
+
+
+
     void SpawnEnemies()
     {
         List<Vector2Int> floors = new List<Vector2Int>(floorPositions);
@@ -355,5 +422,14 @@ public class DungeonGenerator : MonoBehaviour
         floorTilemap.ClearAllTiles();
         wallTilemap.ClearAllTiles();
         floorPositions.Clear();
+    }
+
+    public void NextLevel()
+    {
+        ClearEnemies();
+        ClearDoor();
+        ClearDungeon();
+
+        GenerateDungeon();
     }
 }
