@@ -1,14 +1,37 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerMovement : MonoBehaviour
 {
+    [Header("Movement")]
     public float moveSpeed = 5f;
-    public Sprite idleSprite; // Drag your default idle sprite here in the Inspector
+
+    [Header("Dash")]
+    public float dashSpeed = 20f;
+    public float dashDuration = 0.15f;
+    public float dashCooldown = 1f;
+
+    [Header("Idle Sprite")]
+    public Sprite idleSprite;
 
     private Rigidbody2D rb;
     private Animator animator;
     private SpriteRenderer spriteRenderer;
+
     private Vector2 movement;
+
+    public bool isDashing = false;
+    private bool canDash = true;
+
+    public bool CanDash
+    {
+        get { return canDash; }
+    }
+
+    public GameObject spellPrefab;
+    public Transform spellSpawnPoint;
+
+    public GameObject dashIndicator;
 
     void Awake()
     {
@@ -19,47 +42,119 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        movement.x = Input.GetAxisRaw("Horizontal");
-        movement.y = Input.GetAxisRaw("Vertical");
-
-        movement.Normalize();
-
-        if (movement != Vector2.zero)
+        if (!isDashing)
         {
-            // 1. We are moving! Make sure the animator is running
-            animator.enabled = true;
+            movement.x = Input.GetAxisRaw("Horizontal");
+            movement.y = Input.GetAxisRaw("Vertical");
 
-            animator.SetFloat("MoveX", movement.x);
-            animator.SetFloat("MoveY", movement.y);
+            movement.Normalize();
 
-            // 2. Flip the sprite horizontally based on direction
-            if (movement.x > 0)
+            if (movement != Vector2.zero)
             {
-                spriteRenderer.flipX = false; // Face Right
-            }
-            else if (movement.x < 0)
-            {
-                spriteRenderer.flipX = true;  // Face Left
-            }
-        }
-        else
-        {
-            // 3. We are standing still! Turn off the animator so it stops changing frames
-            animator.enabled = false;
+                animator.enabled = true;
 
-            // 4. Force the SpriteRenderer to show your preferred idle pose
-            if (idleSprite != null)
-            {
-                spriteRenderer.sprite = idleSprite;
+                animator.SetFloat("MoveX", movement.x);
+                animator.SetFloat("MoveY", movement.y);
+
+                if (movement.x > 0)
+                    spriteRenderer.flipX = false;
+                else if (movement.x < 0)
+                    spriteRenderer.flipX = true;
             }
+            else
+            {
+                animator.enabled = false;
+
+                if (idleSprite != null)
+                    spriteRenderer.sprite = idleSprite;
+            }
+
+            animator.SetFloat("Speed", movement.sqrMagnitude);
         }
 
-        animator.SetFloat("Speed", movement.sqrMagnitude);
+        // Right Mouse Button
+        if (Input.GetMouseButtonDown(1) && canDash)
+        {
+            StartCoroutine(Dash());
+        }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            CastSpell();
+        }
     }
 
     void FixedUpdate()
     {
-        Vector2 newPosition = rb.position + movement * moveSpeed * Time.fixedDeltaTime;
+        if (isDashing)
+            return;
+
+        Vector2 newPosition =
+            rb.position +
+            movement * moveSpeed * Time.fixedDeltaTime;
+
         rb.MovePosition(newPosition);
+
+    }
+
+
+    void CastSpell()
+    {
+        Vector2 direction =
+            (
+                dashIndicator.transform.position -
+                transform.position
+            ).normalized;
+
+        GameObject spell =
+            Instantiate(
+                spellPrefab,
+                dashIndicator.transform.position,
+                Quaternion.identity
+            );
+
+        SpellProjectile projectile =
+            spell.GetComponent<SpellProjectile>();
+
+        projectile.Initialize(direction);
+    }
+
+    IEnumerator Dash()
+    {
+        canDash = false;
+        isDashing = true;
+
+        Vector3 mousePosition =
+            Camera.main.ScreenToWorldPoint(
+                Input.mousePosition
+            );
+
+        mousePosition.z = 0;
+
+        Vector2 dashDirection =
+            ((Vector2)mousePosition -
+             rb.position).normalized;
+
+        float elapsedTime = 0f;
+
+        while (elapsedTime < dashDuration)
+        {
+            rb.MovePosition(
+                rb.position +
+                dashDirection *
+                dashSpeed *
+                Time.fixedDeltaTime
+            );
+
+            elapsedTime += Time.fixedDeltaTime;
+
+            yield return new WaitForFixedUpdate();
+        }
+
+        isDashing = false;
+
+        yield return new WaitForSeconds(dashCooldown);
+
+        canDash = true;
     }
 }
