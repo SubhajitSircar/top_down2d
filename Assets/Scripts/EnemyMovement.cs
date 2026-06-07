@@ -2,13 +2,14 @@ using UnityEngine;
 
 public class EnemyMovement : MonoBehaviour
 {
+    // State machine tracking for procedural AI routines
     public enum LeechState { Exploring, Chasing }
 
     [Header("Movement Speeds")]
     public float exploreSpeed = 1.5f;
     public float chaseSpeed = 3.5f;
-    public float latchPushSpeed = 1.0f; // Slow persistent force to shove the player into corners
-    public float stopDistance = 0.2f;   // Kept practically at zero so they get right on top of you
+    public float latchPushSpeed = 1.0f; // Speed applied when tightly latched onto player footprint
+    public float stopDistance = 0.2f;
 
     [Header("Detection Settings")]
     public float chaseRadius = 10f;
@@ -21,11 +22,14 @@ public class EnemyMovement : MonoBehaviour
     [Header("State Debug")]
     public LeechState currentState = LeechState.Exploring;
 
+    // External component references
     private Transform player;
     private PlayerHealth playerHealth;
+    private PlayerMovement playerMovement;
     private Rigidbody2D rb;
     private Animator animator;
 
+    // Movement tracking vectors & timers
     private Vector2 exploreDirection;
     private float directionChangeTimer;
     private float maxTimePerDirection = 4f;
@@ -34,21 +38,26 @@ public class EnemyMovement : MonoBehaviour
 
     void Start()
     {
+        // Cache internal physics components
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
 
+        // Find and link player object reference components
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             player = playerObj.transform;
             playerHealth = playerObj.GetComponent<PlayerHealth>();
+            playerMovement = playerObj.GetComponent<PlayerMovement>();
         }
 
+        // Initialize first random travel direction vector
         PickRandomDirection();
     }
 
     void FixedUpdate()
     {
+        // Process behaviors based on current active state machine node
         switch (currentState)
         {
             case LeechState.Exploring:
@@ -61,10 +70,9 @@ public class EnemyMovement : MonoBehaviour
                 break;
         }
 
-        // FEEDING LOGIC: If latched onto the player, suck health continuously
+        // Apply health-draining tick sequentially over consecutive physics frames
         if (isLatchedOnPlayer && playerHealth != null)
         {
-            // Multiplied by Time.fixedDeltaTime so it drains smoothly precisely over 1 real second
             playerHealth.TakeDamageOverTime(damagePerSecond * Time.fixedDeltaTime);
         }
     }
@@ -73,9 +81,11 @@ public class EnemyMovement : MonoBehaviour
     {
         directionChangeTimer += Time.fixedDeltaTime;
 
+        // Raycast forward to prevent running into tilemap walls before impact
         float checkDistance = Mathf.Max(1.5f, exploreSpeed * 0.4f);
         RaycastHit2D wallHit = Physics2D.Raycast(rb.position, exploreDirection, checkDistance, wallLayer);
 
+        // Turn immediately if wall is detected or direction change timer expires
         if (wallHit.collider != null || directionChangeTimer >= maxTimePerDirection)
         {
             PickRandomDirection();
@@ -87,6 +97,7 @@ public class EnemyMovement : MonoBehaviour
     void PickRandomDirection()
     {
         directionChangeTimer = 0f;
+        // Generate random vector using basic trigonometry mapping
         float randomAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
         exploreDirection = new Vector2(Mathf.Cos(randomAngle), Mathf.Sin(randomAngle)).normalized;
     }
@@ -97,11 +108,13 @@ public class EnemyMovement : MonoBehaviour
 
         float distanceToPlayer = Vector2.Distance(player.position, rb.position);
 
+        // If player enters perimeter, run a line-of-sight raycast to ensure no wall is blocking visibility
         if (distanceToPlayer <= chaseRadius)
         {
             Vector2 directionToPlayer = ((Vector2)player.position - rb.position).normalized;
             RaycastHit2D hit = Physics2D.Raycast(rb.position, directionToPlayer, distanceToPlayer, wallLayer);
 
+            // Transition to chasing if path is totally clear
             if (hit.collider == null)
             {
                 currentState = LeechState.Chasing;
@@ -119,6 +132,7 @@ public class EnemyMovement : MonoBehaviour
 
         float distanceToPlayer = Vector2.Distance(player.position, rb.position);
 
+        // Drop target focus if player moves past max escape boundaries
         if (distanceToPlayer > loseChaseRadius)
         {
             currentState = LeechState.Exploring;
@@ -128,24 +142,25 @@ public class EnemyMovement : MonoBehaviour
 
         Vector2 moveDirection = ((Vector2)player.position - rb.position).normalized;
 
+        // Dynamic wall dodging while tracking: check if direct path to player hits an obstacle corner
         float dynamicCheckDistance = Mathf.Max(1.5f, chaseSpeed * 0.3f);
         RaycastHit2D wallCheck = Physics2D.Raycast(rb.position, moveDirection, dynamicCheckDistance, wallLayer);
 
         if (wallCheck.collider != null)
         {
+            // Calculate left and right perpendicular steering options
             Vector2 leftSteer = new Vector2(-moveDirection.y, moveDirection.x);
             Vector2 rightSteer = new Vector2(moveDirection.y, -moveDirection.x);
 
             RaycastHit2D leftHit = Physics2D.Raycast(rb.position, leftSteer, dynamicCheckDistance, wallLayer);
             RaycastHit2D rightHit = Physics2D.Raycast(rb.position, rightSteer, dynamicCheckDistance, wallLayer);
 
+            // Steer along whichever path is not blocked by wall structures
             if (leftHit.collider == null) moveDirection += leftSteer * 1.5f;
             else if (rightHit.collider == null) moveDirection += rightSteer * 1.5f;
         }
 
-        // PHYSICAL PUSH LOGIC:
-        // If they are further away, run full speed. If they hit the player, 
-        // maintain a grinding latch speed to push her into the corners.
+        // Adjust velocity contextually depending on distance profile to target bounds
         if (distanceToPlayer > stopDistance)
         {
             MoveLeech(moveDirection.normalized, chaseSpeed);
@@ -158,6 +173,7 @@ public class EnemyMovement : MonoBehaviour
 
     void MoveLeech(Vector2 targetDirection, float currentSpeed)
     {
+        // Flocking Mechanics: Query proximity to prevent enemy sprites from overlapping heavily
         Collider2D[] nearbyEnemies = Physics2D.OverlapCircleAll(transform.position, 2f);
         Vector2 separation = Vector2.zero;
 
@@ -168,38 +184,47 @@ public class EnemyMovement : MonoBehaviour
 
             if (enemy.CompareTag("Enemy"))
             {
+                // Accumulate pushaway vector vectors from neighboring leeches
                 separation += ((Vector2)transform.position - (Vector2)enemy.transform.position).normalized;
             }
         }
 
+        // Combine direct target pathing vector with group separation priorities
         Vector2 finalDirection = targetDirection;
         if (targetDirection != Vector2.zero || separation != Vector2.zero)
         {
-            // When close to the player, we reduce separation influence slightly
-            // so they can compact into a tighter swarming clump over her body
             float separationWeight = (currentSpeed == latchPushSpeed) ? 0.3f : 1.0f;
             finalDirection = (targetDirection + (separation * separationWeight)).normalized;
         }
 
+        // Apply spatial translation updates cleanly via Rigidbody position cycles
         rb.MovePosition(rb.position + finalDirection * currentSpeed * Time.fixedDeltaTime);
 
+        // Update blending tree values on the animator controller asset if mapped
         if (animator != null)
         {
             animator.SetFloat("Speed", finalDirection.sqrMagnitude * currentSpeed);
         }
     }
 
-    // Detection hooks using Unity Physics Colliders
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        // Engage physical feeding state when hitting player collider layers
         if (collision.gameObject.CompareTag("Player"))
         {
             isLatchedOnPlayer = true;
+
+            // Trigger the red hit-flash visual loop indicator instantly on contact
+            if (playerMovement != null)
+            {
+                playerMovement.TriggerHurtFlash();
+            }
         }
     }
 
     private void OnCollisionExit2D(Collision2D collision)
     {
+        // Terminate feeding state parameters once contact is broken
         if (collision.gameObject.CompareTag("Player"))
         {
             isLatchedOnPlayer = false;
@@ -208,6 +233,7 @@ public class EnemyMovement : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
+        // Render debugging sphere outlines directly inside the editor scene viewport windows
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, chaseRadius);
         Gizmos.color = Color.red;

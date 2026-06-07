@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 4054992814064389052}
   - component: {fileID: 6362205479012478971}
   - component: {fileID: 781631784139572569}
+  - component: {fileID: 5995561954712026789}
   m_Layer: 6
   m_Name: Enemy 1
   m_TagString: Enemy
@@ -174,12 +175,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   exploreSpeed: 5
   chaseSpeed: 15
+  latchPushSpeed: 1
   stopDistance: 2
   chaseRadius: 25
   loseChaseRadius: 50
   wallLayer:
     serializedVersion: 2
     m_Bits: 128
+  damagePerSecond: 5
   currentState: 0
 --- !u!95 &781631784139572569
 Animator:
@@ -202,3 +205,18 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5995561954712026789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6785372697113670938}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 151ffa344641bc745a584e6a3312ba0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 5
+  corpseDecayDuration: 3.5
+  hitSparkVfxPrefab: {fileID: 1509602544358267063, guid: ad0107b416ed2fb4bb9ebb0bf347de25, type: 3}
