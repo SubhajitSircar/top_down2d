@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerCombat : MonoBehaviour
 {
@@ -11,7 +12,13 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private float spellLifetime = 3f;
     [SerializeField] private float drawingScaleMultiplier = 0.02f;
 
-    // This stores the last drawing pattern the player sketched
+    [Tooltip("The color of your projectile in the game panel and your UI spellbook preview.")]
+    [SerializeField] private Color spellColor = Color.cyan;
+
+    [Header("UI Preview Setup")]
+    [SerializeField] private RectTransform spellPreviewDisplay; // Drag your SpellPreviewDisplay here!
+    [SerializeField] private float previewLineWidth = 4f;
+
     private List<Vector2> activeSpellPattern = new List<Vector2>();
     private Camera mainCamera;
 
@@ -19,15 +26,13 @@ public class PlayerCombat : MonoBehaviour
     {
         mainCamera = Camera.main;
 
-        // Setup a basic default projectile line (a simple dot/square) 
-        // so the player can shoot even before drawing anything for the first time
+        // Default spell baseline
         activeSpellPattern.Add(new Vector2(-10, 0));
         activeSpellPattern.Add(new Vector2(10, 0));
     }
 
     void Update()
     {
-        // Continuous Shooting Loop
         if (Input.GetMouseButtonDown(0))
         {
             // Only fire if the mouse cursor is inside the 70% gameplay zone on the left
@@ -38,42 +43,90 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    // Called by the DrawingPad script whenever a brand-new design is drawn
     public void UpdateDrawnSpellPattern(List<Vector2> newPattern)
     {
         if (newPattern == null || newPattern.Count < 2) return;
 
-        // Overwrite our old spell memory with the new design layout!
         activeSpellPattern = new List<Vector2>(newPattern);
-        Debug.Log("<color=yellow><b>Spell Updated! New shape locked into memory.</b></color>");
+        Debug.Log("<color=yellow><b>Active spell pattern updated!</b></color>");
+
+        // --- GENERATE THE UI PREVIEW ---
+        GenerateUiPreview();
+    }
+
+    private void GenerateUiPreview()
+    {
+        if (spellPreviewDisplay == null) return;
+
+        // 1. Wipe out the old drawing segments inside the info panel box
+        foreach (Transform child in spellPreviewDisplay)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // 2. Find the mathematical center of your drawing so it centers perfectly in the box
+        Vector2 centerOffset = Vector2.zero;
+        foreach (Vector2 point in activeSpellPattern) centerOffset += point;
+        centerOffset /= activeSpellPattern.Count;
+
+        // 3. Recreate the drawing lines step-by-step as clean UI shapes inside your info window
+        for (int i = 1; i < activeSpellPattern.Count; i++)
+        {
+            // Align points to the center of the info container
+            Vector2 start = activeSpellPattern[i - 1] - centerOffset;
+            Vector2 end = activeSpellPattern[i] - centerOffset;
+
+            // Scale down the drawing by 50% so it fits nicely inside your small preview box
+            start *= 0.5f;
+            end *= 0.5f;
+
+            GameObject segment = new GameObject("PreviewLineSegment", typeof(Image));
+            segment.transform.SetParent(spellPreviewDisplay, false);
+
+            Image image = segment.GetComponent<Image>();
+
+            // --- UPDATED: UI PREVIEW MATCHES YOUR CUSTOM COLOR WHEEL NOW ---
+            image.color = spellColor;
+
+            RectTransform rect = segment.GetComponent<RectTransform>();
+            Vector2 direction = end - start;
+            float distance = direction.magnitude;
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+
+            // Anchor it squarely to the center of your info block
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.sizeDelta = new Vector2(distance, previewLineWidth);
+            rect.anchoredPosition = start;
+            rect.localRotation = Quaternion.Euler(0, 0, angle);
+        }
     }
 
     private void FireActiveSpell()
     {
         if (dynamicSpellPrefab == null || activeSpellPattern.Count < 2) return;
 
-        // 1. Calculate direction from the player toward the mouse cursor in world space
         Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0f;
         Vector2 shootDirection = ((Vector2)mouseWorldPos - (Vector2)transform.position).normalized;
 
-        // 2. Spawn the empty projectile base container
         GameObject newSpell = Instantiate(dynamicSpellPrefab, transform.position, Quaternion.identity);
         Destroy(newSpell, spellLifetime);
 
-        // 3. Attach a LineRenderer to project the drawing shape
         LineRenderer line = newSpell.AddComponent<LineRenderer>();
         line.startWidth = 0.15f;
         line.endWidth = 0.15f;
         line.useWorldSpace = false;
         line.material = new Material(Shader.Find("Sprites/Default"));
-        line.startColor = Color.cyan;
+
+        // --- UPDATED: PROJECTILE MATCHES YOUR CUSTOM COLOR WHEEL NOW ---
+        line.startColor = spellColor;
         line.endColor = Color.white;
 
         Vector2[] colliderPoints = new Vector2[activeSpellPattern.Count];
         line.positionCount = activeSpellPattern.Count;
 
-        // Find the mathematical center of the saved layout vectors
         Vector2 centerOffset = Vector2.zero;
         foreach (Vector2 point in activeSpellPattern) centerOffset += point;
         centerOffset /= activeSpellPattern.Count;
@@ -85,7 +138,6 @@ public class PlayerCombat : MonoBehaviour
             line.SetPosition(i, new Vector3(localAdjustedPoint.x, localAdjustedPoint.y, 0f));
         }
 
-        // 4. Update the physics edge collider boundaries to mirror the shape perfectly
         EdgeCollider2D edgeCollider = newSpell.GetComponent<EdgeCollider2D>();
         if (edgeCollider != null)
         {
@@ -93,13 +145,10 @@ public class PlayerCombat : MonoBehaviour
             edgeCollider.isTrigger = true;
         }
 
-        // 5. Blast the custom shaped beam towards your mouse aim direction!
         Rigidbody2D rb = newSpell.GetComponent<Rigidbody2D>();
         if (rb != null)
         {
             rb.velocity = shootDirection * projectileSpeed;
-
-            // Turn the drawing shape to face towards your aiming line smoothly
             float angle = Mathf.Atan2(shootDirection.y, shootDirection.x) * Mathf.Rad2Deg;
             newSpell.transform.rotation = Quaternion.Euler(0, 0, angle - 90f);
         }
