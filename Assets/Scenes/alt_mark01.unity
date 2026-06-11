@@ -260,7 +260,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 8.76
+  orthographic size: 15.37
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -395,6 +395,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1498355938}
   - component: {fileID: 1498355937}
+  - component: {fileID: 1498355939}
   m_Layer: 0
   m_Name: Square
   m_TagString: Untagged
@@ -469,6 +470,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1498355939
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1498355936}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b75b75cacb82cff479fe264d1f4002f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dynamicSpellPrefab: {fileID: 0}
+  projectileSpeed: 10
+  spellLifetime: 2.5
+  drawingScaleMultiplier: 0.02
 --- !u!1 &1671939419
 GameObject:
   m_ObjectHideFlags: 0
@@ -585,6 +602,7 @@ GameObject:
   - component: {fileID: 1715248532}
   - component: {fileID: 1715248531}
   - component: {fileID: 1715248533}
+  - component: {fileID: 1715248534}
   m_Layer: 0
   m_Name: player
   m_TagString: Untagged
@@ -632,7 +650,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 10
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 0.990566, g: 0, b: 0, a: 1}
   m_FlipX: 0
@@ -744,6 +762,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 10
+--- !u!114 &1715248534
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1715248528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b75b75cacb82cff479fe264d1f4002f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dynamicSpellPrefab: {fileID: 8075600880056349204, guid: 7ac1ab0b96b36e1498fa574a31d0485f, type: 3}
+  projectileSpeed: 10
+  spellLifetime: 3
+  drawingScaleMultiplier: 0.02
 --- !u!1 &1738912410
 GameObject:
   m_ObjectHideFlags: 0
