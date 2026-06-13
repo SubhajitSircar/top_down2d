@@ -3,108 +3,223 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class DrawingPad : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+public class DrawingPad : MonoBehaviour, IPointerDownHandler
 {
-    [Header("UI Drawing Settings")]
+    [Header("Drawing Setup")]
     [SerializeField] private Color lineColor = Color.cyan;
     [SerializeField] private float lineWidth = 6f;
     [SerializeField] private float minDistanceBetweenPoints = 6f;
 
-    private GameObject currentLineContainer;
-    private List<Vector2> currentPoints = new List<Vector2>();
+    [Header("Multi-Stroke Settings")]
+    [SerializeField] private float multiStrokeCombineDelay = 1.2f;
+
+    private List<GameObject> visualStrokes = new List<GameObject>();
+
+    // --- NEW ARCHITECTURE: A separate list container for EACH stroke ---
+    private List<List<Vector2>> allStrokesData = new List<List<Vector2>>();
+    private List<Vector2> currentActiveStrokePoints = new List<Vector2>();
+
+    private Vector2 lastPointInCurrentStroke;
+    private bool isFirstPointOfStroke = true;
     private RectTransform rectTransform;
 
-    void Awake()
+    private bool isWaitingForMoreStrokes = false;
+    private float strokeTimer = 0f;
+    private bool isCurrentlyDrawingThisStroke = false;
+
+    void Awake() => rectTransform = GetComponent<RectTransform>();
+
+    void Update()
     {
-        rectTransform = GetComponent<RectTransform>();
+        bool isMousePhysicallyDown = Input.GetMouseButton(0);
+        bool isCursorInsidePad = RectTransformUtility.RectangleContainsScreenPoint(rectTransform, Input.mousePosition, null);
+
+        // Track points ONLY when the hardware button is pressed down
+        if (isMousePhysicallyDown && isCurrentlyDrawingThisStroke)
+        {
+            if (isCursorInsidePad)
+            {
+                TrackMouseFrame();
+            }
+            else
+            {
+                StopCurrentStroke();
+            }
+        }
+
+        // Cut tracking the exact frame the mouse button is released
+        if (!isMousePhysicallyDown && isCurrentlyDrawingThisStroke)
+        {
+            StopCurrentStroke();
+        }
+
+        // Countdown delay window to combine multiple strokes
+        if (isWaitingForMoreStrokes)
+        {
+            strokeTimer += Time.deltaTime;
+            if (strokeTimer >= multiStrokeCombineDelay)
+            {
+                ProcessFinalCombinedDrawing();
+            }
+        }
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        currentPoints.Clear();
+        if (eventData.button != PointerEventData.InputButton.Left) return;
 
-        currentLineContainer = new GameObject("UI_LineStroke", typeof(RectTransform));
-        currentLineContainer.transform.SetParent(transform, false);
+        isWaitingForMoreStrokes = false;
+        isCurrentlyDrawingThisStroke = true;
+        isFirstPointOfStroke = true;
 
-        RectTransform containerRect = currentLineContainer.GetComponent<RectTransform>();
-        containerRect.anchorMin = Vector2.zero;
-        containerRect.anchorMax = Vector2.one;
-        containerRect.sizeDelta = Vector2.zero;
-        containerRect.anchoredPosition = Vector2.zero;
+        // Create a completely clean data list container for this specific line stroke segment
+        currentActiveStrokePoints = new List<Vector2>();
 
-        AddPoint(eventData.position, eventData.pressEventCamera);
+        GameObject container = new GameObject("StrokeLine", typeof(RectTransform));
+        container.transform.SetParent(transform, false);
+        RectTransform r = container.GetComponent<RectTransform>();
+        r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.sizeDelta = Vector2.zero;
+
+        visualStrokes.Add(container);
+        TrackMouseFrame();
     }
 
-    public void OnDrag(PointerEventData eventData)
+    private void TrackMouseFrame()
     {
-        if (currentLineContainer == null) return;
+        if (!Input.GetMouseButton(0)) return;
 
-        if (!RectTransformUtility.RectangleContainsScreenPoint(rectTransform, eventData.position, eventData.pressEventCamera))
+        Vector2 mousePos = Input.mousePosition;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, mousePos, null, out Vector2 localPos);
+
+        if (isFirstPointOfStroke)
         {
-            OnPointerUp(eventData);
-            return;
+            currentActiveStrokePoints.Add(localPos);
+            lastPointInCurrentStroke = localPos;
+            isFirstPointOfStroke = false;
         }
-
-        Vector2 mousePos = eventData.position;
-        if (currentPoints.Count == 0 || Vector2.Distance(mousePos, eventData.position - eventData.delta) > minDistanceBetweenPoints)
+        else if (Vector2.Distance(localPos, lastPointInCurrentStroke) > minDistanceBetweenPoints)
         {
-            AddPoint(mousePos, eventData.pressEventCamera);
-        }
-    }
-
-    public void OnPointerUp(PointerEventData eventData)
-    {
-        if (currentLineContainer == null) return;
-
-        // If the drawing line has enough points, update our memory bank!
-        if (currentPoints.Count > 3)
-        {
-            PlayerCombat playerCombat = FindObjectOfType<PlayerCombat>();
-            if (playerCombat != null)
+            currentActiveStrokePoints.Add(localPos);
+            if (visualStrokes.Count > 0)
             {
-                // Silently updates your gun's active muzzle blueprint shape!
-                playerCombat.UpdateDrawnSpellPattern(new List<Vector2>(currentPoints));
+                CreateLineSegment(lastPointInCurrentStroke, localPos);
+            }
+            lastPointInCurrentStroke = localPos;
+        }
+    }
+
+    private void StopCurrentStroke()
+    {
+        if (!isCurrentlyDrawingThisStroke) return;
+        isCurrentlyDrawingThisStroke = false;
+
+        // If the stroke we just finished drawing actually has data points, save it to our master catalog!
+        if (currentActiveStrokePoints != null && currentActiveStrokePoints.Count > 1)
+        {
+            allStrokesData.Add(new List<Vector2>(currentActiveStrokePoints));
+        }
+
+        if (allStrokesData.Count > 0)
+        {
+            isWaitingForMoreStrokes = true;
+            strokeTimer = 0f;
+        }
+    }
+
+    private void ProcessFinalCombinedDrawing()
+    {
+        isWaitingForMoreStrokes = false;
+        isCurrentlyDrawingThisStroke = false;
+
+        // Flatten our separated stroke lists into a single sequential list ONLY for the UI preview window
+        List<Vector2> flatPointsForPreview = new List<Vector2>();
+        foreach (var strokeList in allStrokesData)
+        {
+            flatPointsForPreview.AddRange(strokeList);
+        }
+
+        if (flatPointsForPreview.Count > 4)
+        {
+            // Bake our matrix texture safely using our completely separated structural lists
+            Texture2D drawnMap = BakeStrokesToMatrixClean();
+
+            PlayerCombat player = FindObjectOfType<PlayerCombat>();
+            if (player != null)
+            {
+                player.ProcessPixelMatching(drawnMap, flatPointsForPreview);
             }
         }
 
-        // Clear the visual drawing slate immediately so you can sketch a different spell
-        Destroy(currentLineContainer, 0.1f);
-        currentLineContainer = null;
+        // Clean out our memory spaces completely for the next spellcast
+        foreach (GameObject stroke in visualStrokes) Destroy(stroke);
+        visualStrokes.Clear();
+        allStrokesData.Clear();
+        currentActiveStrokePoints.Clear();
     }
 
-    private void AddPoint(Vector2 screenPosition, Camera eventCamera)
+    private Texture2D BakeStrokesToMatrixClean()
     {
-        Vector2 localPos;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPosition, eventCamera, out localPos);
+        Texture2D tex = new Texture2D(32, 32);
+        for (int x = 0; x < 32; x++)
+            for (int y = 0; y < 32; y++)
+                tex.SetPixel(x, y, Color.clear);
 
-        currentPoints.Add(localPos);
+        // Step 1: Find the absolute bounds of ONLY real points across all independent strokes
+        float minX = float.MaxValue, maxX = float.MinValue;
+        float minY = float.MaxValue, maxY = float.MinValue;
 
-        if (currentPoints.Count > 1)
+        foreach (var strokeList in allStrokesData)
         {
-            CreateUiLineSegment(currentPoints[currentPoints.Count - 2], currentPoints[currentPoints.Count - 1]);
+            foreach (Vector2 p in strokeList)
+            {
+                if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+            }
         }
+
+        float width = maxX - minX;
+        float height = maxY - minY;
+        float longestSide = Mathf.Max(width, height);
+        if (longestSide < 1f) longestSide = 1f;
+
+        // Step 2: Draw pixels onto the matrix stroke by stroke without ever connecting them!
+        foreach (var strokeList in allStrokesData)
+        {
+            foreach (Vector2 pt in strokeList)
+            {
+                float normX = ((pt.x - minX) + (longestSide - width) * 0.5f) / longestSide;
+                float normY = ((pt.y - minY) + (longestSide - height) * 0.5f) / longestSide;
+
+                int pixelX = Mathf.Clamp((int)(normX * 24) + 4, 0, 31);
+                int pixelY = Mathf.Clamp((int)(normY * 24) + 4, 0, 31);
+
+                // Safe 3x3 pixel stamp brush map
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        tex.SetPixel(Mathf.Clamp(pixelX + dx, 0, 31), Mathf.Clamp(pixelY + dy, 0, 31), Color.red);
+                    }
+                }
+            }
+        }
+
+        tex.Apply();
+        return tex;
     }
 
-    private void CreateUiLineSegment(Vector2 start, Vector2 end)
+    private void CreateLineSegment(Vector2 start, Vector2 end)
     {
-        GameObject segment = new GameObject("LineSegment", typeof(Image));
-        segment.transform.SetParent(currentLineContainer.transform, false);
+        GameObject segment = new GameObject("Segment", typeof(Image));
+        segment.transform.SetParent(visualStrokes[visualStrokes.Count - 1].transform, false);
+        segment.GetComponent<Image>().color = lineColor;
 
-        Image image = segment.GetComponent<Image>();
-        image.color = lineColor;
-
-        RectTransform rect = segment.GetComponent<RectTransform>();
-        Vector2 direction = end - start;
-        float distance = direction.magnitude;
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.zero;
-        rect.sizeDelta = new Vector2(distance, lineWidth);
-        rect.pivot = new Vector2(0f, 0.5f);
-
-        Vector2 pivotOffset = new Vector2(rectTransform.rect.width * 0.5f, rectTransform.rect.height * 0.5f);
-        rect.anchoredPosition = start + pivotOffset;
-        rect.localRotation = Quaternion.Euler(0, 0, angle);
+        RectTransform r = segment.GetComponent<RectTransform>();
+        Vector2 dir = end - start;
+        r.anchorMin = r.anchorMax = Vector2.zero;
+        r.sizeDelta = new Vector2(dir.magnitude, lineWidth);
+        r.pivot = new Vector2(0f, 0.5f);
+        r.anchoredPosition = start + new Vector2(rectTransform.rect.width * 0.5f, rectTransform.rect.height * 0.5f);
+        r.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
     }
 }
