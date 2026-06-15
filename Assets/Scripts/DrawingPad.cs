@@ -14,8 +14,6 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
     [SerializeField] private float multiStrokeCombineDelay = 1.2f;
 
     private List<GameObject> visualStrokes = new List<GameObject>();
-
-    // --- NEW ARCHITECTURE: A separate list container for EACH stroke ---
     private List<List<Vector2>> allStrokesData = new List<List<Vector2>>();
     private List<Vector2> currentActiveStrokePoints = new List<Vector2>();
 
@@ -34,7 +32,6 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
         bool isMousePhysicallyDown = Input.GetMouseButton(0);
         bool isCursorInsidePad = RectTransformUtility.RectangleContainsScreenPoint(rectTransform, Input.mousePosition, null);
 
-        // Track points ONLY when the hardware button is pressed down
         if (isMousePhysicallyDown && isCurrentlyDrawingThisStroke)
         {
             if (isCursorInsidePad)
@@ -47,13 +44,11 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
             }
         }
 
-        // Cut tracking the exact frame the mouse button is released
         if (!isMousePhysicallyDown && isCurrentlyDrawingThisStroke)
         {
             StopCurrentStroke();
         }
 
-        // Countdown delay window to combine multiple strokes
         if (isWaitingForMoreStrokes)
         {
             strokeTimer += Time.deltaTime;
@@ -70,9 +65,10 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
 
         isWaitingForMoreStrokes = false;
         isCurrentlyDrawingThisStroke = true;
+
+        // CRITICAL FIX: Ensure the tracking engine treats the next frame as a fresh start point
         isFirstPointOfStroke = true;
 
-        // Create a completely clean data list container for this specific line stroke segment
         currentActiveStrokePoints = new List<Vector2>();
 
         GameObject container = new GameObject("StrokeLine", typeof(RectTransform));
@@ -91,6 +87,7 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
         Vector2 mousePos = Input.mousePosition;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, mousePos, null, out Vector2 localPos);
 
+        // PHANTOM FIX: Safely anchor our first point without linking it back to prior stroke coordinates
         if (isFirstPointOfStroke)
         {
             currentActiveStrokePoints.Add(localPos);
@@ -113,8 +110,7 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
         if (!isCurrentlyDrawingThisStroke) return;
         isCurrentlyDrawingThisStroke = false;
 
-        // If the stroke we just finished drawing actually has data points, save it to our master catalog!
-        if (currentActiveStrokePoints != null && currentActiveStrokePoints.Count > 1)
+        if (currentActiveStrokePoints != null && currentActiveStrokePoints.Count > 0)
         {
             allStrokesData.Add(new List<Vector2>(currentActiveStrokePoints));
         }
@@ -131,26 +127,25 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
         isWaitingForMoreStrokes = false;
         isCurrentlyDrawingThisStroke = false;
 
-        // Flatten our separated stroke lists into a single sequential list ONLY for the UI preview window
-        List<Vector2> flatPointsForPreview = new List<Vector2>();
+        // Flatten the multi-stroke points into a unified list for your original raw drawing format
+        List<Vector2> flatPoints = new List<Vector2>();
         foreach (var strokeList in allStrokesData)
         {
-            flatPointsForPreview.AddRange(strokeList);
+            flatPoints.AddRange(strokeList);
         }
 
-        if (flatPointsForPreview.Count > 4)
+        if (flatPoints.Count > 3)
         {
-            // Bake our matrix texture safely using our completely separated structural lists
             Texture2D drawnMap = BakeStrokesToMatrixClean();
 
             PlayerCombat player = FindObjectOfType<PlayerCombat>();
             if (player != null)
             {
-                player.ProcessPixelMatching(drawnMap, flatPointsForPreview);
+                // Dispatches straight to your original matching hook signature
+                player.ProcessPixelMatching(drawnMap, flatPoints);
             }
         }
 
-        // Clean out our memory spaces completely for the next spellcast
         foreach (GameObject stroke in visualStrokes) Destroy(stroke);
         visualStrokes.Clear();
         allStrokesData.Clear();
@@ -164,7 +159,6 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
             for (int y = 0; y < 32; y++)
                 tex.SetPixel(x, y, Color.clear);
 
-        // Step 1: Find the absolute bounds of ONLY real points across all independent strokes
         float minX = float.MaxValue, maxX = float.MinValue;
         float minY = float.MaxValue, maxY = float.MinValue;
 
@@ -182,7 +176,6 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
         float longestSide = Mathf.Max(width, height);
         if (longestSide < 1f) longestSide = 1f;
 
-        // Step 2: Draw pixels onto the matrix stroke by stroke without ever connecting them!
         foreach (var strokeList in allStrokesData)
         {
             foreach (Vector2 pt in strokeList)
@@ -193,7 +186,6 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
                 int pixelX = Mathf.Clamp((int)(normX * 24) + 4, 0, 31);
                 int pixelY = Mathf.Clamp((int)(normY * 24) + 4, 0, 31);
 
-                // Safe 3x3 pixel stamp brush map
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     for (int dy = -1; dy <= 1; dy++)

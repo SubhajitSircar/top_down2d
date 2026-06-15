@@ -829,16 +829,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b75b75cacb82cff479fe264d1f4002f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  defaultProjectilePrefab: {fileID: 5596664251884347733, guid: 3f0203577f3c7094088c8eb54d3bd66f, type: 3}
   fireProjectilePrefab: {fileID: 169719425460400707, guid: 12b1b427ec38bd44aa8d7b9f4bd7b350, type: 3}
   waterProjectilePrefab: {fileID: 1018135819089606423, guid: 0593948b66607374495519a0944e8b80, type: 3}
   lightningProjectilePrefab: {fileID: 2816434306069874361, guid: d457d0ac73cc0da4ab44f3ddaf9509b3, type: 3}
   earthProjectilePrefab: {fileID: 7437135240668682557, guid: 0b756c0f7d901194ab6ef55512977dbd, type: 3}
   windProjectilePrefab: {fileID: 7946520490357270053, guid: bf96503874f8952479a0acf986b01263, type: 3}
-  fireSprite: {fileID: -2001800062, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
-  waterSprite: {fileID: -1976445682, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
-  lightningSprite: {fileID: -1070826368, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
-  earthSprite: {fileID: 792676780, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
-  windSprite: {fileID: -961481760, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
+  fireSprite: {fileID: 1588268181, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
+  waterSprite: {fileID: 835522378, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
+  lightningSprite: {fileID: -946196505, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
+  earthSprite: {fileID: -2045962545, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
+  windSprite: {fileID: 1588355016, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
   projectileSpeed: 10
   spellLifetime: 3
   spellPreviewDisplay: {fileID: 711079014}
