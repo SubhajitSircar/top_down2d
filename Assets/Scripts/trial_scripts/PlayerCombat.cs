@@ -1,32 +1,40 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class PlayerCombat : MonoBehaviour
 {
     [Header("Drag Your 5 Colored Circle Prefabs Here!")]
-    [SerializeField] private GameObject defaultProjectilePrefab; // Your Lime Circle Attack!
+    [SerializeField] private GameObject defaultProjectilePrefab;
     [SerializeField] private GameObject fireProjectilePrefab;
     [SerializeField] private GameObject waterProjectilePrefab;
     [SerializeField] private GameObject lightningProjectilePrefab;
     [SerializeField] private GameObject earthProjectilePrefab;
     [SerializeField] private GameObject windProjectilePrefab;
 
-    [Header("Drag Your Slices Directly Here from the Project Window!")]
-    [SerializeField] private Sprite fireSprite;
-    [SerializeField] private Sprite waterSprite;
-    [SerializeField] private Sprite lightningSprite;
-    [SerializeField] private Sprite earthSprite;
-    [SerializeField] private Sprite windSprite;
+    [Header("Drag Your 5 Shape Sprites For The UI Display!")]
+    [SerializeField] private Sprite fireDisplaySprite;
+    [SerializeField] private Sprite waterDisplaySprite;
+    [SerializeField] private Sprite lightningDisplaySprite;
+    [SerializeField] private Sprite earthDisplaySprite;
+    [SerializeField] private Sprite windDisplaySprite;
 
-    [Header("Spell Settings")]
+    [Header("Spell Classifier Settings")]
     [SerializeField] private float projectileSpeed = 10f;
     [SerializeField] private float spellLifetime = 3f;
+    [Range(0.5f, 0.95f)] [SerializeField] private float mlConfidenceThreshold = 0.65f;
+
+    [Header("UI Toggle Settings")]
+    // --- THE NEW SERIALIZED TOGGLE FIELD ---
+    [Tooltip("Check this box to show the yellow vector line tracing. Uncheck it to completely hide it!")]
+    [SerializeField] private bool showVisualDrawingPreview = true;
 
     [Header("UI Preview Setup")]
     [SerializeField] private RectTransform spellPreviewDisplay;
     [SerializeField] private float previewLineWidth = 4f;
-    [SerializeField] private Text infoPanelTitleText;
+    [SerializeField] private TextMeshProUGUI infoPanelTitleText;
+    [SerializeField] private Image infoPanelSpriteDisplay;
 
     private GameObject currentActivePrefab;
     private Color activeUiColor = Color.white;
@@ -51,158 +59,188 @@ public class PlayerCombat : MonoBehaviour
     {
         currentActivePrefab = defaultProjectilePrefab;
         activeUiColor = Color.green;
+
         if (infoPanelTitleText != null)
         {
             infoPanelTitleText.text = "READY TO CAST (DRAW SPELL)";
             infoPanelTitleText.color = Color.white;
         }
+
+        // Clean out any leftover preview segments on reset
+        WipeOldPreviewLines();
     }
 
-    public void ProcessPixelMatching(Texture2D drawnTexture, List<Vector2> rawDrawingPoints)
+    public void ProcessCoordinateRecognition(List<Vector2> rawDrawingPoints)
     {
-        string bestMatchElement = "Unknown";
-        float highestMatchScore = 0.12f;
-
-        Dictionary<string, Sprite> database = new Dictionary<string, Sprite>()
+        int strokeCount = 0;
+        foreach (var p in rawDrawingPoints)
         {
-            { "Fire", fireSprite },
-            { "Water", waterSprite },
-            { "Lightning", lightningSprite },
-            { "Earth", earthSprite },
-            { "Wind", windSprite }
-        };
-
-        // 🛠️ EXTRACTION: Calculate the geometric aspect ratio of what the user actually drew
-        float minX = float.MaxValue, maxX = float.MinValue;
-        float minY = float.MaxValue, maxY = float.MinValue;
-        foreach (Vector2 pt in rawDrawingPoints)
-        {
-            if (pt.x < minX) minX = pt.x; if (pt.x > maxX) maxX = pt.x;
-            if (pt.y < minY) minY = pt.y; if (pt.y > maxY) maxY = pt.y;
+            if (p.x == -10000f) strokeCount++;
         }
-        float drawingWidth = maxX - minX;
-        float drawingHeight = maxY - minY;
-        float drawingAspectRatio = drawingWidth / (drawingHeight > 0f ? drawingHeight : 1f);
 
-        Debug.Log("================ SIGIL COMPARISON RUN ================");
-        foreach (var element in database)
+        List<Vector2> cleanPointsForML = new List<Vector2>();
+        foreach (Vector2 p in rawDrawingPoints)
         {
-            if (element.Value == null) continue;
-
-            float score = ComparePixelsWithSpriteSlice(drawnTexture, element.Value);
-
-            // 🛠️ CALIBRATION HOOK: If the drawing is wide and we are checking Wind, boost its score.
-            // If the drawing is wide and we are checking Earth, penalize it since Earth must be a square diamond.
-            if (element.Key == "Wind" && drawingAspectRatio > 1.25f)
-            {
-                score += 0.15f; // Structural boost for horizontal chevron stacking
-            }
-            else if (element.Key == "Earth" && drawingAspectRatio > 1.25f)
-            {
-                score -= 0.15f; // Protect against wide shapes matching the square diamond template
-            }
-
-            Debug.Log($"📊 Matrix Evaluation -> {element.Key}: {score * 100f:F1}% match accuracy");
-
-            if (score > highestMatchScore)
-            {
-                highestMatchScore = score;
-                bestMatchElement = element.Key;
-            }
+            if (p.x != -10000f) cleanPointsForML.Add(p);
         }
-        Debug.Log("======================================================");
 
-        if (bestMatchElement != "Unknown")
+        if (cleanPointsForML.Count < 8)
         {
-            Debug.Log($"<color=green><b>MATCH DETECTED:</b></color> Loaded {bestMatchElement} elements!");
-            ActivateElementState(bestMatchElement, rawDrawingPoints);
+            ResetToDefaultSpell();
+            return;
+        }
+
+        float totalBendsDegrees = CalculateTotalCurvature(cleanPointsForML);
+        string bestMatchElement = GestureRecognizerML.Classify(cleanPointsForML, out float confidenceScore);
+        bool structuralStrokeMatch = true;
+
+        switch (bestMatchElement)
+        {
+            case "Lightning":
+                if (strokeCount != 1) structuralStrokeMatch = false;
+                if (totalBendsDegrees < 120f) structuralStrokeMatch = false;
+                break;
+
+            case "Fire":
+                if (strokeCount != 2) structuralStrokeMatch = false;
+                if (totalBendsDegrees < 250f) structuralStrokeMatch = false;
+                break;
+
+            case "Water":
+                if (strokeCount != 2) structuralStrokeMatch = false;
+                break;
+
+            case "Earth":
+                if (strokeCount < 2) structuralStrokeMatch = false;
+                if (totalBendsDegrees < 200f) structuralStrokeMatch = false;
+                break;
+
+            case "Wind":
+                if (strokeCount != 3) structuralStrokeMatch = false;
+                break;
+        }
+
+        if (strokeCount == 3 && bestMatchElement == "Earth")
+        {
+            bestMatchElement = "Wind";
+            structuralStrokeMatch = true;
+        }
+
+        Debug.Log($"======================================================");
+        Debug.Log($"🤖 [ML CLASSIFIER] Match: {bestMatchElement} | Confidence: {confidenceScore * 100f:F1}% | Total Bends: {totalBendsDegrees:F1}° | Strokes: {strokeCount} | Valid: {structuralStrokeMatch}");
+        Debug.Log($"======================================================");
+
+        if (confidenceScore >= mlConfidenceThreshold && bestMatchElement != "Unknown" && structuralStrokeMatch)
+        {
+            ActivateElementState(bestMatchElement, cleanPointsForML);
         }
         else
         {
-            Debug.Log("<color=red><b>Match failed:</b></color> High-precision threshold missed. Falling back to default.");
+            Debug.Log("<color=orange><b>Structural Guard:</b></color> Angle validation failed or stroke mismatch. Resetting.");
             ResetToDefaultSpell();
         }
     }
 
-    private float ComparePixelsWithSpriteSlice(Texture2D drawn, Sprite targetSprite)
+    private float CalculateTotalCurvature(List<Vector2> points)
     {
-        Texture2D sheetTex = targetSprite.texture;
-        Rect spriteRect = targetSprite.rect;
+        if (points.Count < 3) return 0f;
 
-        int referenceLinePixels = 0;
-        int positiveMatches = 0;
-        int negativeMismatches = 0;
+        float totalAngles = 0f;
+        int sampleStep = Mathf.Max(1, points.Count / 12);
 
-        // 🛠️ FIX: Calculate aspect ratio scaling bounds to prevent thin rectangles from stretching out
-        float maxSide = Mathf.Max(spriteRect.width, spriteRect.height);
-        if (maxSide < 1f) maxSide = 1f;
+        List<Vector2> filteredPoints = new List<Vector2>();
+        for (int i = 0; i < points.Count; i += sampleStep) filteredPoints.Add(points[i]);
+        if (!filteredPoints.Contains(points[points.Count - 1])) filteredPoints.Add(points[points.Count - 1]);
 
-        for (int x = 0; x < 32; x++)
+        for (int i = 1; i < filteredPoints.Count - 1; i++)
         {
-            for (int y = 0; y < 32; y++)
-            {
-                float normX = (float)x / 32f;
-                float normY = (float)y / 32f;
+            Vector2 dir1 = (filteredPoints[i] - filteredPoints[i - 1]).normalized;
+            Vector2 dir2 = (filteredPoints[i + 1] - filteredPoints[i]).normalized;
 
-                // Map coordinates uniformly to keep the original visual aspect ratio intact
-                float localX = (normX - 0.5f) * maxSide + (spriteRect.width * 0.5f);
-                float localY = (normY - 0.5f) * maxSide + (spriteRect.height * 0.5f);
+            float dot = Vector2.Dot(dir1, dir2);
+            dot = Mathf.Clamp(dot, -1f, 1f);
 
-                // Clamp to keep lookups safely bounded inside your custom slice box
-                float sheetPixelX = spriteRect.x + Mathf.Clamp(localX, 0f, spriteRect.width);
-                float sheetPixelY = spriteRect.y + Mathf.Clamp(localY, 0f, spriteRect.height);
-
-                Color refPixel = sheetTex.GetPixelBilinear(sheetPixelX / sheetTex.width, sheetPixelY / sheetTex.height);
-                Color drawnPixel = drawn.GetPixel(x, y);
-
-                // Forgiving alpha/color check for clean detection across thin lines
-                bool isRefLine = refPixel.a > 0.25f && refPixel.r > 0.35f;
-
-                if (isRefLine)
-                {
-                    referenceLinePixels++;
-                    if (drawnPixel.r > 0.5f) positiveMatches++;
-                }
-                else
-                {
-                    // Adjusted mismatch penalty multiplier from 0.4f to 0.2f for better multi-stroke detection
-                    if (drawnPixel.r > 0.5f) negativeMismatches++;
-                }
-            }
+            float angle = Mathf.Acos(dot) * Mathf.Rad2Deg;
+            if (angle > 15f) totalAngles += angle;
         }
-
-        if (referenceLinePixels == 0) return 0f;
-
-        float finalScore = (float)(positiveMatches - (negativeMismatches * 0.2f)) / referenceLinePixels;
-        return finalScore;
+        return totalAngles;
     }
 
     private void ActivateElementState(string element, List<Vector2> shapeCoordinates)
     {
+        WipeOldPreviewLines();
+
         activeSpellPattern = new List<Vector2>(shapeCoordinates);
+        Sprite activeSpriteToDisplay = null;
+        string formalSpellName = "";
 
         switch (element)
         {
-            case "Fire": currentActivePrefab = fireProjectilePrefab; activeUiColor = Color.red; break;
-            case "Water": currentActivePrefab = waterProjectilePrefab; activeUiColor = Color.blue; break;
-            case "Lightning": currentActivePrefab = lightningProjectilePrefab; activeUiColor = Color.yellow; break;
-            case "Earth": currentActivePrefab = earthProjectilePrefab; activeUiColor = Color.green; break;
-            case "Wind": currentActivePrefab = windProjectilePrefab; activeUiColor = Color.gray; break;
+            case "Fire":
+                currentActivePrefab = fireProjectilePrefab;
+                activeUiColor = Color.red;
+                activeSpriteToDisplay = fireDisplaySprite;
+                formalSpellName = "IGNIS FLASH (FIRE)";
+                break;
+            case "Water":
+                currentActivePrefab = waterProjectilePrefab;
+                activeUiColor = Color.blue;
+                activeSpriteToDisplay = waterDisplaySprite;
+                formalSpellName = "AQUA SURGE (WATER)";
+                break;
+            case "Lightning":
+                currentActivePrefab = lightningProjectilePrefab;
+                activeUiColor = Color.yellow;
+                activeSpriteToDisplay = lightningDisplaySprite;
+                formalSpellName = "VOLT BOLT (LIGHTNING)";
+                break;
+            case "Earth":
+                currentActivePrefab = earthProjectilePrefab;
+                activeUiColor = Color.green;
+                activeSpriteToDisplay = earthDisplaySprite;
+                formalSpellName = "TERRA WALL (EARTH)";
+                break;
+            case "Wind":
+                currentActivePrefab = windProjectilePrefab;
+                activeUiColor = Color.gray;
+                activeSpriteToDisplay = windDisplaySprite;
+                formalSpellName = "ZEPHYR GALE (WIND)";
+                break;
         }
 
         if (infoPanelTitleText != null)
         {
-            infoPanelTitleText.text = element.ToUpper() + " SPELL ACTIVATED!";
+            infoPanelTitleText.text = formalSpellName;
             infoPanelTitleText.color = activeUiColor;
         }
 
-        GenerateUiPreview();
+        if (infoPanelSpriteDisplay != null && activeSpriteToDisplay != null)
+        {
+            infoPanelSpriteDisplay.enabled = true;
+            infoPanelSpriteDisplay.sprite = activeSpriteToDisplay;
+            infoPanelSpriteDisplay.color = Color.white;
+            infoPanelSpriteDisplay.transform.SetAsLastSibling();
+        }
+
+        // --- CHECK THE TOGGLE GUARD BEFORE DRAWING ---
+        if (showVisualDrawingPreview)
+        {
+            GenerateUiPreview();
+        }
+    }
+
+    private void WipeOldPreviewLines()
+    {
+        if (spellPreviewDisplay == null) return;
+        for (int i = spellPreviewDisplay.childCount - 1; i >= 0; i--)
+        {
+            Destroy(spellPreviewDisplay.GetChild(i).gameObject);
+        }
     }
 
     private void GenerateUiPreview()
     {
         if (spellPreviewDisplay == null) return;
-        foreach (Transform child in spellPreviewDisplay) Destroy(child.gameObject);
 
         Vector2 centerOffset = Vector2.zero;
         foreach (Vector2 point in activeSpellPattern) centerOffset += point;
@@ -212,9 +250,10 @@ public class PlayerCombat : MonoBehaviour
         {
             Vector2 start = activeSpellPattern[i - 1] - centerOffset;
             Vector2 end = activeSpellPattern[i] - centerOffset;
-            start *= 0.5f; end *= 0.5f;
 
-            GameObject segment = new GameObject("PreviewSegment", typeof(Image));
+            start *= 0.45f; end *= 0.45f;
+
+            GameObject segment = new GameObject("PreviewSegmentLine", typeof(Image));
             segment.transform.SetParent(spellPreviewDisplay, false);
 
             Image image = segment.GetComponent<Image>();

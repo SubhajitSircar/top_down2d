@@ -1,9 +1,9 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class DrawingPad : MonoBehaviour, IPointerDownHandler
+public class DrawingPad : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
 {
     [Header("Drawing Setup")]
     [SerializeField] private Color lineColor = Color.cyan;
@@ -23,32 +23,15 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
 
     private bool isWaitingForMoreStrokes = false;
     private float strokeTimer = 0f;
-    private bool isCurrentlyDrawingThisStroke = false;
 
-    void Awake() => rectTransform = GetComponent<RectTransform>();
+    void Awake()
+    {
+        rectTransform = GetComponent<RectTransform>();
+    }
 
     void Update()
     {
-        bool isMousePhysicallyDown = Input.GetMouseButton(0);
-        bool isCursorInsidePad = RectTransformUtility.RectangleContainsScreenPoint(rectTransform, Input.mousePosition, null);
-
-        if (isMousePhysicallyDown && isCurrentlyDrawingThisStroke)
-        {
-            if (isCursorInsidePad)
-            {
-                TrackMouseFrame();
-            }
-            else
-            {
-                StopCurrentStroke();
-            }
-        }
-
-        if (!isMousePhysicallyDown && isCurrentlyDrawingThisStroke)
-        {
-            StopCurrentStroke();
-        }
-
+        // The Update loop ONLY handles the countdown timer buffer to combine separate strokes
         if (isWaitingForMoreStrokes)
         {
             strokeTimer += Time.deltaTime;
@@ -59,35 +42,63 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
         }
     }
 
+    // NATIVE UI EVENT: Fires EXACTLY ONE FRAME when left click is pressed down INSIDE the pad boundaries
     public void OnPointerDown(PointerEventData eventData)
     {
         if (eventData.button != PointerEventData.InputButton.Left) return;
 
         isWaitingForMoreStrokes = false;
-        isCurrentlyDrawingThisStroke = true;
-
-        // CRITICAL FIX: Ensure the tracking engine treats the next frame as a fresh start point
         isFirstPointOfStroke = true;
-
         currentActiveStrokePoints = new List<Vector2>();
 
-        GameObject container = new GameObject("StrokeLine", typeof(RectTransform));
+        // Create a dedicated parent container object for this specific line segment path
+        GameObject container = new GameObject("StrokeLineContainer", typeof(RectTransform));
         container.transform.SetParent(transform, false);
         RectTransform r = container.GetComponent<RectTransform>();
         r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.sizeDelta = Vector2.zero;
 
         visualStrokes.Add(container);
-        TrackMouseFrame();
+
+        // Record the initial touch point position safely
+        RecordPoint(eventData.position);
     }
 
-    private void TrackMouseFrame()
+    // NATIVE UI EVENT: Fires continuously ONLY when mouse is clicked down AND dragging across the screen
+    public void OnDrag(PointerEventData eventData)
     {
-        if (!Input.GetMouseButton(0)) return;
+        if (eventData.button != PointerEventData.InputButton.Left) return;
 
-        Vector2 mousePos = Input.mousePosition;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, mousePos, null, out Vector2 localPos);
+        // Double check bounds safety lock to stop drawing if they drag outside the drawing panel box
+        if (!RectTransformUtility.RectangleContainsScreenPoint(rectTransform, eventData.position, eventData.pressEventCamera))
+        {
+            return;
+        }
 
-        // PHANTOM FIX: Safely anchor our first point without linking it back to prior stroke coordinates
+        RecordPoint(eventData.position);
+    }
+
+    // NATIVE UI EVENT: Fires EXACTLY ONE FRAME the absolute millisecond your finger lifts off the mouse button
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+
+        // Instantly save our temporary stroke into the master array catalog data tree
+        if (currentActiveStrokePoints != null && currentActiveStrokePoints.Count > 1)
+        {
+            allStrokesData.Add(new List<Vector2>(currentActiveStrokePoints));
+        }
+
+        if (allStrokesData.Count > 0)
+        {
+            isWaitingForMoreStrokes = true;
+            strokeTimer = 0f;
+        }
+    }
+
+    private void RecordPoint(Vector2 screenPosition)
+    {
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPosition, null, out Vector2 localPos);
+
         if (isFirstPointOfStroke)
         {
             currentActiveStrokePoints.Add(localPos);
@@ -105,104 +116,41 @@ public class DrawingPad : MonoBehaviour, IPointerDownHandler
         }
     }
 
-    private void StopCurrentStroke()
-    {
-        if (!isCurrentlyDrawingThisStroke) return;
-        isCurrentlyDrawingThisStroke = false;
-
-        if (currentActiveStrokePoints != null && currentActiveStrokePoints.Count > 0)
-        {
-            allStrokesData.Add(new List<Vector2>(currentActiveStrokePoints));
-        }
-
-        if (allStrokesData.Count > 0)
-        {
-            isWaitingForMoreStrokes = true;
-            strokeTimer = 0f;
-        }
-    }
-
     private void ProcessFinalCombinedDrawing()
     {
         isWaitingForMoreStrokes = false;
-        isCurrentlyDrawingThisStroke = false;
 
-        // Flatten the multi-stroke points into a unified list for your original raw drawing format
-        List<Vector2> flatPoints = new List<Vector2>();
+        List<Vector2> trackingPointsWithMarkers = new List<Vector2>();
+
         foreach (var strokeList in allStrokesData)
         {
-            flatPoints.AddRange(strokeList);
+            // Inject structural layout breakers so PlayerCombat reads stroke intervals cleanly
+            trackingPointsWithMarkers.Add(new Vector2(-10000f, -10000f));
+            trackingPointsWithMarkers.AddRange(strokeList);
         }
 
-        if (flatPoints.Count > 3)
+        if (trackingPointsWithMarkers.Count > 4)
         {
-            Texture2D drawnMap = BakeStrokesToMatrixClean();
-
             PlayerCombat player = FindObjectOfType<PlayerCombat>();
             if (player != null)
             {
-                // Dispatches straight to your original matching hook signature
-                player.ProcessPixelMatching(drawnMap, flatPoints);
+                player.ProcessCoordinateRecognition(trackingPointsWithMarkers);
             }
         }
 
-        foreach (GameObject stroke in visualStrokes) Destroy(stroke);
+        // Wipe UI GameObjects and references cleanly before starting next stroke
+        foreach (GameObject stroke in visualStrokes)
+        {
+            if (stroke != null) Destroy(stroke);
+        }
         visualStrokes.Clear();
         allStrokesData.Clear();
         currentActiveStrokePoints.Clear();
     }
 
-    private Texture2D BakeStrokesToMatrixClean()
-    {
-        Texture2D tex = new Texture2D(32, 32);
-        for (int x = 0; x < 32; x++)
-            for (int y = 0; y < 32; y++)
-                tex.SetPixel(x, y, Color.clear);
-
-        float minX = float.MaxValue, maxX = float.MinValue;
-        float minY = float.MaxValue, maxY = float.MinValue;
-
-        foreach (var strokeList in allStrokesData)
-        {
-            foreach (Vector2 p in strokeList)
-            {
-                if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
-                if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
-            }
-        }
-
-        float width = maxX - minX;
-        float height = maxY - minY;
-        float longestSide = Mathf.Max(width, height);
-        if (longestSide < 1f) longestSide = 1f;
-
-        foreach (var strokeList in allStrokesData)
-        {
-            foreach (Vector2 pt in strokeList)
-            {
-                float normX = ((pt.x - minX) + (longestSide - width) * 0.5f) / longestSide;
-                float normY = ((pt.y - minY) + (longestSide - height) * 0.5f) / longestSide;
-
-                int pixelX = Mathf.Clamp((int)(normX * 24) + 4, 0, 31);
-                int pixelY = Mathf.Clamp((int)(normY * 24) + 4, 0, 31);
-
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    for (int dy = -1; dy <= 1; dy++)
-                    {
-                        tex.SetPixel(Mathf.Clamp(pixelX + dx, 0, 31), Mathf.Clamp(pixelY + dy, 0, 31), Color.red);
-                    }
-                }
-            }
-        }
-
-        tex.Apply();
-        return tex;
-    }
-
     private void CreateLineSegment(Vector2 start, Vector2 end)
     {
-        GameObject segment = new GameObject("Segment", typeof(Image));
+        GameObject segment = new GameObject("SegmentLineUI", typeof(Image));
         segment.transform.SetParent(visualStrokes[visualStrokes.Count - 1].transform, false);
         segment.GetComponent<Image>().color = lineColor;
 
