@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 9162068656707690411}
   - component: {fileID: 6442810344727971296}
   - component: {fileID: 5689893602019683943}
+  - component: {fileID: 8918717701978646750}
+  - component: {fileID: 1316627879223414770}
   m_Layer: 0
   m_Name: FireProjectile
   m_TagString: Untagged
@@ -148,3 +150,34 @@ CircleCollider2D:
   m_Offset: {x: 0, y: 0}
   serializedVersion: 2
   m_Radius: 0.5
+--- !u!114 &8918717701978646750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 169719425460400707}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d673c176ded35d34a8c71784f1cfa436, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  projectileElement: 2
+  baseDamage: 25
+--- !u!114 &1316627879223414770
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 169719425460400707}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca4341569dc4c2046a3fe75a955fbef2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wallLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
+  splinterPrefab: {fileID: 169719425460400707}
+  splinterCount: 3

@@ -23,10 +23,9 @@ public class PlayerCombat : MonoBehaviour
     [Header("Spell Classifier Settings")]
     [SerializeField] private float projectileSpeed = 10f;
     [SerializeField] private float spellLifetime = 3f;
-    [Range(0.5f, 0.95f)] [SerializeField] private float mlConfidenceThreshold = 0.65f;
+    [Range(0.5f, 0.95f)][SerializeField] private float mlConfidenceThreshold = 0.65f;
 
     [Header("UI Toggle Settings")]
-    // --- THE NEW SERIALIZED TOGGLE FIELD ---
     [Tooltip("Check this box to show the yellow vector line tracing. Uncheck it to completely hide it!")]
     [SerializeField] private bool showVisualDrawingPreview = true;
 
@@ -66,7 +65,6 @@ public class PlayerCombat : MonoBehaviour
             infoPanelTitleText.color = Color.white;
         }
 
-        // Clean out any leftover preview segments on reset
         WipeOldPreviewLines();
     }
 
@@ -222,7 +220,6 @@ public class PlayerCombat : MonoBehaviour
             infoPanelSpriteDisplay.transform.SetAsLastSibling();
         }
 
-        // --- CHECK THE TOGGLE GUARD BEFORE DRAWING ---
         if (showVisualDrawingPreview)
         {
             GenerateUiPreview();
@@ -280,7 +277,17 @@ public class PlayerCombat : MonoBehaviour
         GameObject projectile = Instantiate(currentActivePrefab, transform.position, Quaternion.identity);
         Destroy(projectile, spellLifetime);
 
-        Rigidbody2D rb = projectile.GetComponent<Rigidbody2D>();
-        if (rb != null) rb.velocity = shootDirection * projectileSpeed;
+        // 🛠️ INTEGRATED HOOK: Link velocity calculation and identity tags via ElementalProjectile
+        ElementalProjectile elementalScript = projectile.GetComponent<ElementalProjectile>();
+        if (elementalScript != null)
+        {
+            elementalScript.InitializeVelocity(shootDirection, projectileSpeed);
+        }
+        else
+        {
+            // Fallback safety routine if the component isn't explicitly found
+            Rigidbody2D rb = projectile.GetComponent<Rigidbody2D>();
+            if (rb != null) rb.velocity = shootDirection * projectileSpeed;
+        }
     }
 }

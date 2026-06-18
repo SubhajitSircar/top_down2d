@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 35899861179842079}
   - component: {fileID: 3930652283562482721}
   - component: {fileID: 6127043812205494683}
+  - component: {fileID: -2163705278609527796}
+  - component: {fileID: 2888715167940521757}
   m_Layer: 0
   m_Name: WindProjectile
   m_TagString: Untagged
@@ -148,3 +150,34 @@ CircleCollider2D:
   m_Offset: {x: 0, y: 0}
   serializedVersion: 2
   m_Radius: 0.5
+--- !u!114 &-2163705278609527796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7946520490357270053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d673c176ded35d34a8c71784f1cfa436, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  projectileElement: 5
+  baseDamage: 25
+--- !u!114 &2888715167940521757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7946520490357270053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca4341569dc4c2046a3fe75a955fbef2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wallLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
+  splinterPrefab: {fileID: 7946520490357270053}
+  splinterCount: 3

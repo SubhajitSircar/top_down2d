@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 202018015631311957}
   - component: {fileID: 8710775085993495427}
   - component: {fileID: 1290102328175177470}
+  - component: {fileID: -2739885656791732674}
+  - component: {fileID: 4173593983943984322}
   m_Layer: 0
   m_Name: CircleAttack
   m_TagString: Untagged
@@ -148,3 +150,34 @@ CircleCollider2D:
   m_Offset: {x: 0, y: 0}
   serializedVersion: 2
   m_Radius: 0.49999997
+--- !u!114 &-2739885656791732674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5596664251884347733}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d673c176ded35d34a8c71784f1cfa436, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  projectileElement: 0
+  baseDamage: 5
+--- !u!114 &4173593983943984322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5596664251884347733}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca4341569dc4c2046a3fe75a955fbef2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wallLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
+  splinterPrefab: {fileID: 5596664251884347733}
+  splinterCount: 3

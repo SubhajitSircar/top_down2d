@@ -7,6 +7,12 @@ public class SpellProjectile : MonoBehaviour
     public float lifeTime = 3f;
     public int damageDealt = 10; // 🛠️ Damage value per single fireball impact
 
+    [Header("Premium Impact Polish")]
+    [Tooltip("How hard this spell pushes the enemy back.")]
+    public float knockbackForce = 5f;
+    [Tooltip("How long the enemy freezes when hit by this spell.")]
+    public float stunDuration = 0.15f;
+
     private Vector2 direction;
 
     public void Initialize(Vector2 dir)
@@ -24,6 +30,7 @@ public class SpellProjectile : MonoBehaviour
 
     void Update()
     {
+        // Moves the projectile forward manually every frame
         transform.position += (Vector3)(direction * speed * Time.deltaTime);
     }
 
@@ -32,18 +39,20 @@ public class SpellProjectile : MonoBehaviour
         // Wall Collision Handler
         if (collision.gameObject.layer == LayerMask.NameToLayer("Walls"))
         {
+            // TODO: Add a small particle effect instantiation here for a premium wall hit
             Destroy(gameObject);
         }
 
         // 🛠️ ENEMY IMPACT INTERCEPTOR
-        // ENEMY IMPACT INTERCEPTOR
         if (collision.gameObject.CompareTag("Enemy"))
         {
             EnemyHealth enemyHealth = collision.gameObject.GetComponent<EnemyHealth>();
             if (enemyHealth != null)
             {
-                // 🛠️ UPDATED LINE: Pass 'direction' along with the damage value!
-                enemyHealth.TakeDamage(damageDealt, direction);
+                // 🛠️ UPDATED CALL: Now includes the knockback and stun duration required by the new system!
+                enemyHealth.TakeDamage(damageDealt, direction, knockbackForce, stunDuration);
+
+                // TODO: Add impact spark particles here before destroying
                 Destroy(gameObject);
             }
         }
