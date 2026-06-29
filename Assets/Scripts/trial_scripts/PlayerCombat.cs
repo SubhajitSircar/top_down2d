@@ -48,9 +48,24 @@ public class PlayerCombat : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetMouseButtonDown(0) && Input.mousePosition.x < Screen.width * 0.7f)
+        if (Input.GetMouseButtonDown(0))
         {
-            FireActiveSpell();
+            // Find our panel controller in the scene
+            UiPanelController uiController = Object.FindFirstObjectByType<UiPanelController>();
+
+            if (uiController != null && uiController.IsPanelOpen)
+            {
+                // IF THE PANEL IS OPEN: Block shooting on the right 30% of the screen so drawing works safely
+                if (Input.mousePosition.x < Screen.width * 0.7f)
+                {
+                    FireActiveSpell();
+                }
+            }
+            else
+            {
+                // IF THE PANEL IS CLOSED: You have 100% full screen shooting freedom!
+                FireActiveSpell();
+            }
         }
     }
 
