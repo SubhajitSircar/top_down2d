@@ -110,11 +110,23 @@ public class NewPlayerMovement : MonoBehaviour
 
     private void TriggerActiveSpellPrefab()
     {
-        // TARGET UPDATED: Pointing to your NewPlayerCombat script name
         NewPlayerCombat combatComponent = GetComponent<NewPlayerCombat>();
         if (combatComponent != null)
         {
-            combatComponent.InvokePrivateFireMechanism();
+            Vector3 spawnPos = spellSpawnPoint != null ? spellSpawnPoint.position : transform.position;
+
+            // Calculate the exact direction the arrow is pointing!
+            Vector2 shootDirection = (spawnPos - transform.position).normalized;
+
+            // Failsafe: If no spawn point is assigned, fallback to aiming at the mouse
+            if (shootDirection == Vector2.zero)
+            {
+                Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                shootDirection = ((Vector2)mousePos - (Vector2)transform.position).normalized;
+            }
+
+            // Pass BOTH the position and the new direction to the combat script
+            combatComponent.InvokePrivateFireMechanism(spawnPos, shootDirection);
         }
     }
 

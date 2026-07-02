@@ -43,7 +43,8 @@ public class DungeonGenerator : MonoBehaviour
     private bool firstRoomCreated;
 
     [Header("Enemies")]
-    public GameObject enemyPrefab;
+    [Tooltip("Drag all 5 of your elemental slime prefabs into this array!")]
+    public GameObject[] enemyPrefabs;
     public int enemyCount = 10;
 
     private List<GameObject> spawnedEnemies = new List<GameObject>();
@@ -286,41 +287,76 @@ public class DungeonGenerator : MonoBehaviour
     void SpawnEnemies()
     {
         List<Vector2Int> floors = new List<Vector2Int>(floorPositions);
+
+        // --- 1. DYNAMIC ENEMY COUNT ---
+        // Calculates the size of the level based on walkable floor tiles.
+        // A smaller level gets ~10 enemies, a massive level caps out at 25.
+        int calculatedCount = Mathf.Clamp(floors.Count / 300, 10, 25);
+        enemyCount = calculatedCount; // Update the global count for the wave manager tracking
+
+        aliveInitialGuardsCount = enemyCount;
+
         int spawned = 0;
         int attempts = 0;
         int maxAttempts = enemyCount * 10;
 
-        aliveInitialGuardsCount = enemyCount;
+        // --- 2. SELECT EXACTLY 2 RANDOM ENEMY TYPES ---
+        List<GameObject> currentLevelEnemyTypes = new List<GameObject>();
+        if (enemyPrefabs != null && enemyPrefabs.Length > 0)
+        {
+            // Pick the first random enemy type
+            int index1 = Random.Range(0, enemyPrefabs.Length);
+            currentLevelEnemyTypes.Add(enemyPrefabs[index1]);
 
+            // Pick a second random enemy type, ensuring it is NOT the same as the first one
+            if (enemyPrefabs.Length > 1)
+            {
+                int index2 = Random.Range(0, enemyPrefabs.Length);
+                while (index2 == index1)
+                {
+                    index2 = Random.Range(0, enemyPrefabs.Length);
+                }
+                currentLevelEnemyTypes.Add(enemyPrefabs[index2]);
+            }
+        }
+
+        // --- 3. SPAWN THE SELECTED ENEMIES ---
         while (spawned < enemyCount && attempts < maxAttempts)
         {
             attempts++;
             Vector2Int randomFloor = floors[Random.Range(0, floors.Count)];
 
-            // 🛠️ WALL SPAWN FIX: Verify this tile is an inner floor tile and doesn't touch wall borders
+            // Verify this tile is an inner floor tile and doesn't touch wall borders
             bool isEdgeTile =
                 !floorPositions.Contains(randomFloor + Vector2Int.up) ||
                 !floorPositions.Contains(randomFloor + Vector2Int.down) ||
                 !floorPositions.Contains(randomFloor + Vector2Int.left) ||
                 !floorPositions.Contains(randomFloor + Vector2Int.right) ||
-                !floorPositions.Contains(randomFloor + new Vector2Int(1, 1)) ||   // Top-Right Corner
-                !floorPositions.Contains(randomFloor + new Vector2Int(-1, 1)) ||  // Top-Left Corner
-                !floorPositions.Contains(randomFloor + new Vector2Int(1, -1)) ||  // Bottom-Right Corner
-                !floorPositions.Contains(randomFloor + new Vector2Int(-1, -1));   // Bottom-Left Corner
+                !floorPositions.Contains(randomFloor + new Vector2Int(1, 1)) ||
+                !floorPositions.Contains(randomFloor + new Vector2Int(-1, 1)) ||
+                !floorPositions.Contains(randomFloor + new Vector2Int(1, -1)) ||
+                !floorPositions.Contains(randomFloor + new Vector2Int(-1, -1));
 
             // Skip this tile if it borders a wall area to avoid pinning physics colliders
             if (isEdgeTile) continue;
 
             Vector2 spawnPos = new Vector2(randomFloor.x + 0.5f, randomFloor.y + 0.5f);
 
+            // Keep enemies away from the player's immediate spawn room
             if (Vector2.Distance(spawnPos, firstRoomCenter) < 25f)
             {
                 continue;
             }
 
-            GameObject enemy = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
-            spawnedEnemies.Add(enemy);
-            spawned++;
+            if (currentLevelEnemyTypes.Count > 0)
+            {
+                // Randomly pick between the 2 specific enemy types chosen for this level
+                GameObject randomSlime = currentLevelEnemyTypes[Random.Range(0, currentLevelEnemyTypes.Count)];
+
+                GameObject enemy = Instantiate(randomSlime, spawnPos, Quaternion.identity);
+                spawnedEnemies.Add(enemy);
+                spawned++;
+            }
         }
 
         // Catch-all safety fallback: Reset tracking count if maxAttempts cut off the loop early

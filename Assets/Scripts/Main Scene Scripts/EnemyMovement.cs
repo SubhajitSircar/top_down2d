@@ -24,8 +24,8 @@ public class EnemyMovement : MonoBehaviour
 
     // External component references
     private Transform player;
-    private PlayerHealth playerHealth;
-    private PlayerMovement playerMovement;
+    private NewPlayerHealth playerHealth;
+    private NewPlayerMovement playerMovement;
     private Rigidbody2D rb;
     private Animator animator;
 
@@ -47,8 +47,10 @@ public class EnemyMovement : MonoBehaviour
         if (playerObj != null)
         {
             player = playerObj.transform;
-            playerHealth = playerObj.GetComponent<PlayerHealth>();
-            playerMovement = playerObj.GetComponent<PlayerMovement>();
+
+            // 🛠️ THE FIX: Grab the "New" scripts here!
+            playerHealth = playerObj.GetComponent<NewPlayerHealth>();
+            playerMovement = playerObj.GetComponent<NewPlayerMovement>();
         }
 
         // Initialize first random travel direction vector

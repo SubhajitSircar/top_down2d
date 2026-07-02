@@ -17,7 +17,7 @@ public class DashIndicator : MonoBehaviour
     [Header("Optional Polish References")]
     public ParticleSystem readyParticleBurst;
 
-    private PlayerMovement playerMovement;
+    private NewPlayerMovement playerMovement;
     private SpriteRenderer baseSpriteRenderer;
     private SpriteRenderer glowFillRenderer;
 
@@ -27,7 +27,8 @@ public class DashIndicator : MonoBehaviour
     {
         if (player != null)
         {
-            playerMovement = player.GetComponent<PlayerMovement>();
+            // Change this line to grab the new script
+            playerMovement = player.GetComponent<NewPlayerMovement>();
         }
 
         baseSpriteRenderer = GetComponent<SpriteRenderer>();

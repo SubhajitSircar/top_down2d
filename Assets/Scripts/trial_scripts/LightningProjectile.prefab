@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 1096149856629185422}
   - component: {fileID: -8169461528073151344}
   - component: {fileID: -925791395853595503}
+  - component: {fileID: 5883683846570759165}
   m_Layer: 0
   m_Name: LightningProjectile
   m_TagString: Untagged
@@ -77,8 +78,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 10
-  m_Sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
-  m_Color: {r: 0.94509804, g: 0.8142102, b: 0.02352941, a: 1}
+  m_Sprite: {fileID: -731695937, guid: e451a9dae2b844744a419f6a070a0bdf, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -164,6 +165,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   projectileElement: 4
   baseDamage: 25
+  spriteRotationOffset: 0
 --- !u!114 &-925791395853595503
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -181,3 +183,24 @@ MonoBehaviour:
     m_Bits: 128
   splinterPrefab: {fileID: 2816434306069874361}
   splinterCount: 3
+--- !u!95 &5883683846570759165
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2816434306069874361}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 8fdd008e884738545af130bdb4949c7b, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

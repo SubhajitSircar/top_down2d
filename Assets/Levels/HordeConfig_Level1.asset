@@ -15,16 +15,16 @@ MonoBehaviour:
   waves:
   - waveIndex: 0
     pattern: 0
-    enemyPrefab: {fileID: 6785372697113670938, guid: a9a4fec06c610d447a2d48e78e4dcb96, type: 3}
+    enemyPrefab: {fileID: 6785372697113670938, guid: efb26f111be14e4409934622e6a41208, type: 3}
     count: 25
     speedMultiplier: 1
   - waveIndex: 0
     pattern: 1
-    enemyPrefab: {fileID: 6785372697113670938, guid: a9a4fec06c610d447a2d48e78e4dcb96, type: 3}
+    enemyPrefab: {fileID: 6785372697113670938, guid: a28778563d6f3494196356d6632ec28a, type: 3}
     count: 18
     speedMultiplier: 1.2
   - waveIndex: 0
     pattern: 2
-    enemyPrefab: {fileID: 6785372697113670938, guid: a9a4fec06c610d447a2d48e78e4dcb96, type: 3}
+    enemyPrefab: {fileID: 6785372697113670938, guid: 01e80e6150dbac447a387f8089da7283, type: 3}
     count: 20
     speedMultiplier: 1.3

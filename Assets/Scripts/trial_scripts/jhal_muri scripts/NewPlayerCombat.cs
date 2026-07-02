@@ -249,26 +249,31 @@ public class NewPlayerCombat : MonoBehaviour
             rect.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
         }
     }
-
     // CRITICAL CORE LOGIC: Spawns the projectile toward your mouse pointer
-    private void FireActiveSpell()
+    private void FireActiveSpell(Vector3 spawnPosition, Vector2 shootDirection)
     {
         if (currentActivePrefab == null) return;
 
-        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-        mouseWorldPos.z = 0f;
-        Vector2 shootDirection = ((Vector2)mouseWorldPos - (Vector2)transform.position).normalized;
-
-        GameObject projectile = Instantiate(currentActivePrefab, transform.position, Quaternion.identity);
+        GameObject projectile = Instantiate(currentActivePrefab, spawnPosition, Quaternion.identity);
         Destroy(projectile, spellLifetime);
 
-        Rigidbody2D rb = projectile.GetComponent<Rigidbody2D>();
-        if (rb != null) rb.velocity = shootDirection * projectileSpeed;
+        // 🛠️ THE FIX: Actually talk to the ElementalProjectile script so the rotation runs!
+        ElementalProjectile elementalScript = projectile.GetComponent<ElementalProjectile>();
+        if (elementalScript != null)
+        {
+            elementalScript.InitializeVelocity(shootDirection, projectileSpeed);
+        }
+        else
+        {
+            // Fallback safety routine
+            Rigidbody2D rb = projectile.GetComponent<Rigidbody2D>();
+            if (rb != null) rb.velocity = shootDirection * projectileSpeed;
+        }
     }
 
     // --- THE PUBLIC ACCESSIBLE ENTRY DOOR WAY ---
-    public void InvokePrivateFireMechanism()
+    public void InvokePrivateFireMechanism(Vector3 spawnPosition, Vector2 shootDirection)
     {
-        FireActiveSpell();
+        FireActiveSpell(spawnPosition, shootDirection);
     }
 }

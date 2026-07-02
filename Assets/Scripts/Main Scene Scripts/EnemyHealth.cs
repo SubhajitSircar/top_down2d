@@ -184,6 +184,13 @@ public class EnemyHealth : MonoBehaviour
         if (enemyMovement != null) enemyMovement.enabled = false;
         if (rb != null) { rb.velocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Static; }
 
+        // 🛠️ THE FIX: Tell the Dungeon Generator that a room guard has been killed!
+        DungeonGenerator dungeonGen = FindObjectOfType<DungeonGenerator>();
+        if (dungeonGen != null)
+        {
+            dungeonGen.TrackGuardDeath();
+        }
+
         StartCoroutine(DeathPopRoutine());
     }
 
