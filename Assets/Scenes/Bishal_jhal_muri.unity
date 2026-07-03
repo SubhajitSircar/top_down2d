@@ -700,7 +700,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 23
+  orthographic size: 50.8
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1570,7 +1570,7 @@ MonoBehaviour:
   lightningDisplaySprite: {fileID: -946196505, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
   earthDisplaySprite: {fileID: -2045962545, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
   windDisplaySprite: {fileID: 1588355016, guid: ae6741ad030471343a9391d01d5ea53a, type: 3}
-  projectileSpeed: 10
+  projectileSpeed: 30
   spellLifetime: 3
   mlConfidenceThreshold: 0.9
   showVisualDrawingPreview: 0
@@ -1764,7 +1764,7 @@ TilemapRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 1
   m_ChunkSize: {x: 32, y: 32, z: 32}
-  m_ChunkCullingBounds: {x: 0, y: 0, z: 0}
+  m_ChunkCullingBounds: {x: 0.65625, y: 0.4375, z: 0}
   m_MaxChunkCount: 16
   m_MaxFrameAge: 16
   m_SortOrder: 0

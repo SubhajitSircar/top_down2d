@@ -1,8 +1,8 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Tilemaps;
 using System.Collections.Generic;
 
-public class DungeonGenerator : MonoBehaviour
+public class NEWDungeonGenerator : MonoBehaviour
 {
     [Header("Tilemap References")]
     public Tilemap floorTilemap;
@@ -41,6 +41,23 @@ public class DungeonGenerator : MonoBehaviour
     private Vector2Int currentRoomPosition = Vector2Int.zero;
     private Vector2 firstRoomCenter;
     private bool firstRoomCreated;
+
+    [Header("Top Wall Architecture")]
+    [Tooltip("Drag your PLAIN, solid massive wall tiles here!")]
+    public TileBase[] plainTopWalls;
+
+    [Tooltip("Drag your massive DOORS and GATES here!")]
+    public TileBase[] doorTopWalls;
+
+    [Tooltip("How many grid spaces wide is your massive artwork?")]
+    public int wallWidthSpacing = 6;
+
+    [Tooltip("Minimum grid spaces required between two doors!")]
+    public float minDistanceBetweenDoors = 15f;
+
+    [Tooltip("Percentage chance (0.0 to 1.0) a door will spawn instead of a wall.")]
+    [Range(0f, 1f)]
+    public float doorSpawnChance = 0.15f;
 
     [Header("Enemies")]
     [Tooltip("Drag all 5 of your elemental slime prefabs into this array!")]
@@ -226,6 +243,7 @@ public class DungeonGenerator : MonoBehaviour
         HashSet<Vector2Int> wallPositions = new HashSet<Vector2Int>();
         Vector2Int[] directions = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
+        // 1. Paint all floors and locate where the walls belong
         foreach (Vector2Int pos in floorPositions)
         {
             floorTilemap.SetTile(new Vector3Int(pos.x, pos.y, 0), floorTile);
@@ -240,9 +258,87 @@ public class DungeonGenerator : MonoBehaviour
             }
         }
 
-        foreach (Vector2Int wallPos in wallPositions)
+        HashSet<Vector2Int> blockedPositions = new HashSet<Vector2Int>();
+        List<Vector2Int> placedDoorLocations = new List<Vector2Int>();
+
+        // 🚨 THE FIX: Sort the wall positions from Left to Right!
+        // This stops the random HashSet from painting a wall in a space that a door is about to block.
+        List<Vector2Int> sortedWalls = new List<Vector2Int>(wallPositions);
+        sortedWalls.Sort((a, b) => {
+            if (a.y != b.y) return a.y.CompareTo(b.y);
+            return a.x.CompareTo(b.x);
+        });
+
+        // 2. Paint the walls reading Left-to-Right
+        foreach (Vector2Int wallPos in sortedWalls)
         {
-            wallTilemap.SetTile(new Vector3Int(wallPos.x, wallPos.y, 0), wallTile);
+            bool isTopWallEdge = floorPositions.Contains(wallPos + Vector2Int.down);
+
+            if (isTopWallEdge && !blockedPositions.Contains(wallPos))
+            {
+                bool canSpawnDoor = false;
+
+                if (doorTopWalls.Length > 0 && Random.value <= doorSpawnChance)
+                {
+                    canSpawnDoor = true;
+
+                    // Check corners safely
+                    for (int xOffset = -2; xOffset < wallWidthSpacing + 2; xOffset++)
+                    {
+                        Vector2Int checkPos = new Vector2Int(wallPos.x + xOffset, wallPos.y);
+                        bool neighborIsTopWall = wallPositions.Contains(checkPos) && floorPositions.Contains(checkPos + Vector2Int.down);
+
+                        if (!neighborIsTopWall)
+                        {
+                            canSpawnDoor = false;
+                            break;
+                        }
+                    }
+
+                    // Check distance between existing doors
+                    if (canSpawnDoor)
+                    {
+                        foreach (Vector2Int existingDoor in placedDoorLocations)
+                        {
+                            if (Vector2.Distance(wallPos, existingDoor) < minDistanceBetweenDoors)
+                            {
+                                canSpawnDoor = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                TileBase tileToPlace = null;
+
+                if (canSpawnDoor)
+                {
+                    tileToPlace = doorTopWalls[Random.Range(0, doorTopWalls.Length)];
+                    placedDoorLocations.Add(wallPos);
+                }
+                else if (plainTopWalls.Length > 0)
+                {
+                    tileToPlace = plainTopWalls[Random.Range(0, plainTopWalls.Length)];
+                }
+
+                if (tileToPlace != null)
+                {
+                    wallTilemap.SetTile(new Vector3Int(wallPos.x, wallPos.y, 0), tileToPlace);
+
+                    // Block the exact width of the door so no plain walls spawn over it
+                    for (int i = 0; i < wallWidthSpacing; i++)
+                    {
+                        blockedPositions.Add(new Vector2Int(wallPos.x + i, wallPos.y));
+                    }
+                }
+                continue;
+            }
+
+            // Paint standard wall blocks on unblocked spaces
+            if (!blockedPositions.Contains(wallPos))
+            {
+                wallTilemap.SetTile(new Vector3Int(wallPos.x, wallPos.y, 0), wallTile);
+            }
         }
     }
 
@@ -432,4 +528,5 @@ public class DungeonGenerator : MonoBehaviour
         GenerateDungeon();
     }
 }
+
 
