@@ -184,11 +184,16 @@ public class EnemyHealth : MonoBehaviour
         if (enemyMovement != null) enemyMovement.enabled = false;
         if (rb != null) { rb.velocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Static; }
 
-        // 🛠️ THE FIX: Tell the Dungeon Generator that a room guard has been killed!
-        DungeonGenerator dungeonGen = FindObjectOfType<DungeonGenerator>();
-        if (dungeonGen != null)
+        // 🛠️ THE FIX: Notify StageController that an enemy in this prefab died!
+        StageController stage = GetComponentInParent<StageController>();
+        if (stage == null)
         {
-            dungeonGen.TrackGuardDeath();
+            stage = FindObjectOfType<StageController>();
+        }
+
+        if (stage != null)
+        {
+            stage.OnEnemyDefeated(gameObject);
         }
 
         StartCoroutine(DeathPopRoutine());
