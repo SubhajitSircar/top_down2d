@@ -396,7 +396,7 @@ TextureImporter:
         width: 19
         height: 20
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -404,6 +404,27 @@ TextureImporter:
       bones: []
       spriteID: 97eca6f6a705b764f82fb401dd4541b6
       internalID: -651663759
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Dungeon_24x24_13
+      rect:
+        serializedVersion: 2
+        x: 180
+        y: 85
+        width: 23
+        height: 11
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 787d04f631300954484b596f06454458
+      internalID: 763737692
       vertices: []
       indices: 
       edges: []
@@ -424,6 +445,7 @@ TextureImporter:
       Dungeon_24x24_10: 2029315857
       Dungeon_24x24_11: 2111961179
       Dungeon_24x24_12: -651663759
+      Dungeon_24x24_13: 763737692
       Dungeon_24x24_2: -1990744290
       Dungeon_24x24_3: -1973879111
       Dungeon_24x24_4: -102915279
