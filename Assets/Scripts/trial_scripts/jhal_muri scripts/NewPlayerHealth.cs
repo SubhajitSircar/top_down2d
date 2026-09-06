@@ -1,8 +1,12 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class NewPlayerHealth : MonoBehaviour
 {
+    // Static event broadcast when the player takes damage
+    public static event Action<float, float> OnPlayerHurt;
+
     [Header("Health Settings")]
     public float maxHealth = 100f;
     public float currentHealth;
@@ -33,6 +37,9 @@ public class NewPlayerHealth : MonoBehaviour
 
         currentHealth -= damageAmount;
 
+        // Broadcast hurt event (Multiplier: 1.8, Duration: 0.2s)
+        OnPlayerHurt?.Invoke(1.8f, 0.2f);
+
         if (healthSlider != null)
         {
             healthSlider.value = currentHealth;
@@ -58,20 +65,17 @@ public class NewPlayerHealth : MonoBehaviour
 
         Debug.Log("The witch has perished...");
 
-        // 1. Terminate player control loops completely to freeze input processing tracking
         if (movementScript != null)
         {
             movementScript.enabled = false;
         }
 
-        // 2. Clear visual sprite overlays
         SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
         if (spriteRenderer != null)
         {
             spriteRenderer.sprite = null;
         }
 
-        // 3. Fire death animation cycles
         if (animator != null)
         {
             animator.enabled = true;

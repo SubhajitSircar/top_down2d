@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,6 +6,9 @@ using TMPro;
 
 public class NewPlayerCombat : MonoBehaviour
 {
+    // Static event broadcast when a spell is cast
+    public static event Action<float, float> OnSpellCast;
+
     [Header("Drag Your 5 Colored Circle Prefabs Here!")]
     [SerializeField] private GameObject defaultProjectilePrefab;
     [SerializeField] private GameObject fireProjectilePrefab;
@@ -23,7 +27,7 @@ public class NewPlayerCombat : MonoBehaviour
     [Header("Spell Classifier Settings")]
     [SerializeField] private float projectileSpeed = 10f;
     [SerializeField] private float spellLifetime = 3f;
-    [Range(0.5f, 0.95f)] [SerializeField] private float mlConfidenceThreshold = 0.65f;
+    [Range(0.5f, 0.95f)][SerializeField] private float mlConfidenceThreshold = 0.65f;
 
     [Header("UI Toggle Settings")]
     [Tooltip("Check this box to show the yellow vector line tracing. Uncheck it to completely hide it!")]
@@ -249,15 +253,17 @@ public class NewPlayerCombat : MonoBehaviour
             rect.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
         }
     }
-    // CRITICAL CORE LOGIC: Spawns the projectile toward your mouse pointer
+
     private void FireActiveSpell(Vector3 spawnPosition, Vector2 shootDirection)
     {
         if (currentActivePrefab == null) return;
 
+        // Broadcast spell cast event (Multiplier: 2.5, Duration: 0.4s)
+        OnSpellCast?.Invoke(2.5f, 0.4f);
+
         GameObject projectile = Instantiate(currentActivePrefab, spawnPosition, Quaternion.identity);
         Destroy(projectile, spellLifetime);
 
-        // 🛠️ THE FIX: Actually talk to the ElementalProjectile script so the rotation runs!
         ElementalProjectile elementalScript = projectile.GetComponent<ElementalProjectile>();
         if (elementalScript != null)
         {
@@ -265,13 +271,11 @@ public class NewPlayerCombat : MonoBehaviour
         }
         else
         {
-            // Fallback safety routine
             Rigidbody2D rb = projectile.GetComponent<Rigidbody2D>();
             if (rb != null) rb.velocity = shootDirection * projectileSpeed;
         }
     }
 
-    // --- THE PUBLIC ACCESSIBLE ENTRY DOOR WAY ---
     public void InvokePrivateFireMechanism(Vector3 spawnPosition, Vector2 shootDirection)
     {
         FireActiveSpell(spawnPosition, shootDirection);

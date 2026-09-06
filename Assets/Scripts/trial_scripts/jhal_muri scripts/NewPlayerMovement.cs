@@ -1,8 +1,12 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
 public class NewPlayerMovement : MonoBehaviour
 {
+    // Static event broadcast when the player uses blink dash
+    public static event Action<float, float> OnDash;
+
     [Header("Movement")]
     public float moveSpeed = 5f;
 
@@ -68,13 +72,11 @@ public class NewPlayerMovement : MonoBehaviour
             animator.SetFloat("Speed", movement.sqrMagnitude);
         }
 
-        // Right Click: Teleport Blink Dash
         if (Input.GetMouseButtonDown(1) && canDash)
         {
             StartCoroutine(Dash());
         }
 
-        // Left Click: Attack System Handler
         if (Input.GetMouseButtonDown(0))
         {
             ProcessCombatFireRequest();
@@ -91,11 +93,10 @@ public class NewPlayerMovement : MonoBehaviour
 
     private void ProcessCombatFireRequest()
     {
-        UiPanelController uiController = Object.FindFirstObjectByType<UiPanelController>();
+        UiPanelController uiController = UnityEngine.Object.FindFirstObjectByType<UiPanelController>();
 
         if (uiController != null && uiController.IsPanelOpen)
         {
-            // IF SIDE DRAWER OPEN: Protect the right 30% area from accidental shots while drawing shapes
             if (Input.mousePosition.x < Screen.width * 0.7f)
             {
                 TriggerActiveSpellPrefab();
@@ -103,7 +104,6 @@ public class NewPlayerMovement : MonoBehaviour
         }
         else
         {
-            // IF CLOSED: 100% full monitor coverage freedom
             TriggerActiveSpellPrefab();
         }
     }
@@ -115,17 +115,14 @@ public class NewPlayerMovement : MonoBehaviour
         {
             Vector3 spawnPos = spellSpawnPoint != null ? spellSpawnPoint.position : transform.position;
 
-            // Calculate the exact direction the arrow is pointing!
             Vector2 shootDirection = (spawnPos - transform.position).normalized;
 
-            // Failsafe: If no spawn point is assigned, fallback to aiming at the mouse
             if (shootDirection == Vector2.zero)
             {
                 Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
                 shootDirection = ((Vector2)mousePos - (Vector2)transform.position).normalized;
             }
 
-            // Pass BOTH the position and the new direction to the combat script
             combatComponent.InvokePrivateFireMechanism(spawnPos, shootDirection);
         }
     }
@@ -194,6 +191,9 @@ public class NewPlayerMovement : MonoBehaviour
                 lightningInstance.transform.position = targetPos;
             }
 
+            // Broadcast dash event (Multiplier: 3.2, Duration: 0.3s)
+            OnDash?.Invoke(3.2f, 0.3f);
+
             rb.position = targetPos;
             transform.position = targetPos;
             spriteRenderer.color = originalColor;
@@ -203,7 +203,7 @@ public class NewPlayerMovement : MonoBehaviour
 
             if (hitPortal)
             {
-                DungeonGenerator generator = Object.FindFirstObjectByType<DungeonGenerator>();
+                DungeonGenerator generator = UnityEngine.Object.FindFirstObjectByType<DungeonGenerator>();
                 if (generator != null)
                 {
                     isDashing = false;

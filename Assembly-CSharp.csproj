@@ -68,6 +68,7 @@
     <Compile Include="Assets\Scripts\Main Scene Scripts\DungeonGenerator.cs" />
     <Compile Include="Assets\Scripts\Main Scene Scripts\Door.cs" />
     <Compile Include="Assets\Scripts\trial_scripts\GestureRecognizerML.cs" />
+    <Compile Include="Assets\Scripts\New Build Scripts\Light2DEffects.cs" />
     <Compile Include="Assets\Scripts\Main Scene Scripts\EnemyWaveManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextSelector_A.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark01_UGUI.cs" />
@@ -113,6 +114,8 @@
     <Compile Include="Assets\Scripts\trial_scripts\jhal_muri scripts\NewPlayerHealth.cs" />
     <Compile Include="Assets\Scripts\trial_scripts\EnemyTestSpawner.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexZoom.cs" />
+    <Compile Include="Assets\Scripts\New Build Scripts\ArcaneLight2DEffects.cs" />
+    <Compile Include="Assets\Scripts\New Build Scripts\JuicyDungeonCamera.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextSelector_B.cs" />
     <Compile Include="Assets\Scripts\Main Scene Scripts\PlayerHealth.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\SkewTextExample.cs" />
@@ -121,6 +124,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TextMeshProFloatingText.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\ShaderPropAnimator.cs" />
     <Compile Include="Assets\Scripts\Main Scene Scripts\DrawingPad.cs" />
+    <Compile Include="Assets\Scripts\New Build Scripts\Billboard.cs" />
     <Compile Include="Assets\Scripts\trial_scripts\ElementalEnemyIdentity.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextInfoDebugTool.cs" />
   </ItemGroup>
